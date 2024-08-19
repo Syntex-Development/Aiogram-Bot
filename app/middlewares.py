@@ -18,5 +18,3 @@ class TestMiddleware2(BaseMiddleware):
         if result == sentinel.UNHANDLED:
             await event.delete()
         return result
-    
-    
