@@ -240,3 +240,37 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == 'in_chat')
 async def handler(callback : CallbackQuery, state: FSMContext):
     pass
+
+
+
+
+#Главное меню
+
+@router.callback_query(F.data == 'profile')
+async def profile(callback: CallbackQuery):
+
+    #TODO: Подставить значения из БД!
+    info_message = f"""
+    🐵 **Ваш профиль:**
+
+    **Информация в боте:**
+    🆔 **Ваш TG ID:** {tg_id}
+    💰 **Ваш баланс:** {balance} UC
+    📋 **Выполнено заданий:** {completed_tasks_count} шт.
+
+    **Информация о прокачке:**
+    🥇 **Ваш Уровень:** {lvl}
+    🏅 **Получено достижений:** {taked_achievements_count}
+
+    **Информация о рефералах:**
+    🌟 **Пригласи друга и получи целых 2 UC в придачу!**
+    🔗 **Ваша реферальная ссылка:** {tg_bot_link}?start={tg_id}
+    👥 **Приглашено рефералов:** {refferals_count}
+    💵 **Заработано с рефералов:** +{earned_by_refferals} UC
+
+    **Информация о выводах:**
+    ✨ **Количество выводов:** {count_of_withdrawal}
+    🪙 **На сумму:** {withdrawal_sum} UC
+    """
+
+    await callback.answer(text=info_message,reply_markup=kb.menu_kb())

@@ -27,6 +27,14 @@ def create_panel():
 )
 
 
+def menu_kb():
+    return InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text='Профиль', callback_data=f'profile')]
+    ]
+)
+
+
 def create_long_confirmation():
     return InlineKeyboardMarkup(
     inline_keyboard=[
@@ -43,6 +51,5 @@ def create_event_task(name, url):
         [InlineKeyboardButton(text=' ↺ Проверить', callback_data=f'in_chat')]
     ]
 )
-    
     
     
