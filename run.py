@@ -3,18 +3,18 @@ from aiogram.client.default import DefaultBotProperties
 import asyncio, logging
 
 from app.handlers import router
-from app.database.models import create_db, delete_db
+from app.database.models import create_db, drop_db
 from config import config
 
 
 
 async def main():
-    # await delete_db()
+    # await drop_db()
     await create_db()
     bot = Bot(token=config.TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
     dp = Dispatcher()
     dp.include_router(router)
-    await bot.delete_webhook(drop_pending_updates=True)
+    # await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, skip_updates=True)
     
     

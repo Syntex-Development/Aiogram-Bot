@@ -3,24 +3,46 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 
-close           = [InlineKeyboardButton(text='✖ Закрыть', callback_data='!сlose')]
-cancel          = [InlineKeyboardButton(text='✖ Отмена', callback_data='!сancel')]
-bottom_close    = InlineKeyboardMarkup(inline_keyboard=[close])
-bottom_cancel   = InlineKeyboardMarkup(inline_keyboard=[cancel])
-bottom          = InlineKeyboardMarkup(inline_keyboard=[close, cancel])
-    
-    
+def cancel(data=''):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🚩 Отменить действие', callback_data=f'сancel__{data}')]])
+
+def close(data=''):
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='🔚 Назад', callback_data=f'сlose__{data}')]])
+
+
+
 def create_panel():
     return InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='Отправить сообщение | Создать розыгрыш', callback_data=f'panel__enter_message')],
-        [InlineKeyboardButton(text='Просмотреть профиль пользователя', callback_data=f'panel__check_user')],
-        [InlineKeyboardButton(text='Новое задание | Изменить задание', callback_data=f'panel__new_task')],
-        [InlineKeyboardButton(text='Изменить баланс пользователя', callback_data=f'panel__update_balance')],
-        [InlineKeyboardButton(text='Добавить коды активации', callback_data=f'panel__add_secret_codes')],
-        [InlineKeyboardButton(text='Запустить проверку', callback_data=f'panel__run_check')],
-        [InlineKeyboardButton(text='Добавить админа', callback_data=f'panel__add_admin')],
-        [InlineKeyboardButton(text='Информация', callback_data=f'panel__info')],
+        [InlineKeyboardButton(text='💷 Балансы', callback_data=f'panel__set_balance'),
+         InlineKeyboardButton(text='✨ Secret Codes', callback_data=f'panel__set_secret_codes'),],
+        [InlineKeyboardButton(text='📤  Отправить сообщение', callback_data=f'panel__set_message'), 
+         InlineKeyboardButton(text='📤  Создать розыгрыш', callback_data=f'panel__set_event'),],
+        [InlineKeyboardButton(text='🚄 Запустить проверку', callback_data=f'panel__run_check'),     
+         InlineKeyboardButton(text='⚙ Изменить задание', callback_data=f'panel__task'),],
+        [InlineKeyboardButton(text='🐤 Пользователи', callback_data=f'panel__user'),                
+         InlineKeyboardButton(text='👨🏿‍🚀 Администратор', callback_data=f'panel__set_admin'),],
+        [InlineKeyboardButton(text='📰 Информация', callback_data=f'panel__info')],
     ]
 )
 
+
+def create_long_confirmation():
+    return InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text='🔊 Отправить', callback_data=f'long_confirmation')],
+        [InlineKeyboardButton(text='🔚 Назад', callback_data=f'сlose__')]
+    ]
+)
+   
+   
+def create_event_task(name, url):
+    return InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text=name, url = url)],
+        [InlineKeyboardButton(text=' ↺ Проверить', callback_data=f'in_chat')]
+    ]
+)
+    
+    
+    

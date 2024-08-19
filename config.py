@@ -6,6 +6,8 @@ from environs import Env
 class Config:
     TOKEN : str
     ADMIN : int
+    DATABASE_URL : str
+    
 
 def load_config(path) -> Config:
     env = Env()
@@ -14,6 +16,7 @@ def load_config(path) -> Config:
     return Config(
         env.str("TOKEN"),
         env.int("ADMIN"),
+        env.str("DATABASE_URL"),
     )
     
 config = load_config('.env')

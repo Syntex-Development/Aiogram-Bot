@@ -15,31 +15,58 @@ class Base(AsyncAttrs, DeclarativeBase):
         return str(vars(self)) 
 
 
+    
+class Admin(Base):
+    __tablename__ = 'admins'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+
+class Event(Base):
+    __tablename__ = 'events'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    photo: Mapped[str] =  mapped_column(String(255), nullable=True, default=0)
+    name: Mapped[str] = mapped_column(String(255), nullable=True)
+    link: Mapped[str] = mapped_column(String(255), nullable=True)
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=True, default=0)
+    prizes: Mapped[str] = mapped_column(nullable=True)
+    time: Mapped[DateTime] = mapped_column(DateTime, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True)
+
+class SecretCode(Base):
+    __tablename__ = 'secret_codes'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(255), unique=True)
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    
 class User(Base):
     __tablename__ = 'users'
     
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
-    username: Mapped[str] = mapped_column(String(255), nullable=True)
-    full_name: Mapped[str] = mapped_column(String(255), nullable=True)
+    username: Mapped[str] = mapped_column(String(255))
+    full_name: Mapped[str] = mapped_column(String(255))
     balance: Mapped[int] = mapped_column(BigInteger, default=0)
     referral_earnings: Mapped[float] = mapped_column(Float, default=0)
-    referrer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'), nullable=True)
+    referrer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
     rank_id: Mapped[int] = mapped_column(Integer, default=0)
     initial_task_completed: Mapped[bool] = mapped_column(Boolean, default=False)
-    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    # is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
-    referrals: Mapped[list['User']] = relationship('User', backref='referrer', remote_side=[id])
-    tasks_completed: Mapped[list['TaskCompletion']] = relationship('TaskCompletion', back_populates='user')
-    issued_codes: Mapped[list['IssuedCode']] = relationship('IssuedCode', back_populates='user')
+    
+    # referrals: Mapped[list['User']] = relationship('User', backref='referrer', remote_side=[id])
+    # tasks_completed: Mapped[list['TaskCompletion']] = relationship('TaskCompletion', back_populates='user')
+    # issued_codes: Mapped[list['IssuedCode']] = relationship('IssuedCode', back_populates='user')
 
 # class Task(Base):
 #     __tablename__ = 'tasks'
     
 #     id: Mapped[int] = mapped_column(primary_key=True)
 #     category: Mapped[str] = mapped_column(String(255))
-#     channel_link: Mapped[str] = mapped_column(String(255))
+#     link: Mapped[str] = mapped_column(String(255))
 #     chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
 #     reward: Mapped[float] = mapped_column(Float)
 #     max_completions: Mapped[int] = mapped_column(BigInteger)
@@ -57,37 +84,32 @@ class User(Base):
 #     user: Mapped['User'] = relationship('User', back_populates='tasks_completed')
 #     task: Mapped['Task'] = relationship('Task')
 
-# class SecretCode(Base):
-#     __tablename__ = 'secret_codes'
-    
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-#     code: Mapped[str] = mapped_column(String(255), unique=True)
-#     is_used: Mapped[bool] = mapped_column(Boolean, default=False)
-
 # class IssuedCode(Base):
 #     __tablename__ = 'issued_codes'
     
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+#     id: Mapped[int] = mapped_column(primary_key=True)
 #     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
 #     code: Mapped[str] = mapped_column(String(255))
 #     amount: Mapped[float] = mapped_column(Float, default=60)
 #     issued_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 #     user: Mapped['User'] = relationship('User', back_populates='issued_codes')
     
-class Admin(Base):
-    __tablename__ = 'admins'
     
-    id: Mapped[int] = mapped_column(primary_key=True)
-    tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
+    
 
-
+    
+    
+    
+    
 async def create_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.execute(text("INSERT OR IGNORE INTO admins (tg_id) VALUES (:tg_id)"), {'tg_id': config.ADMIN})
+        await conn.execute(text("INSERT OR IGNORE INTO admins (tg_id) VALUES (:tg_id)"), {'tg_id': 1004756967})
         await conn.commit()
+        
 
 
-async def delete_db():
+async def drop_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

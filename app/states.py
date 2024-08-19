@@ -1,22 +1,23 @@
 from aiogram.fsm.state import StatesGroup, State
 
 
-class AdminStates(StatesGroup):
-    add_task_category = State()
-    add_task_link = State()
-    add_task_reward = State()
-    add_task_completions = State()
-    add_secret_codes = State()
+class SecretCodes(StatesGroup):
+    codes = State()
 
-class UserInput(StatesGroup):
-    id = State()
+class Admin(StatesGroup):
+    tg_id = State()
 
-
-
-
-class Form(StatesGroup):
+class Message(StatesGroup):
     message = State()
-    admin = State()
-    user = State()
-    balance = State()
-    secret_codes = State()
+
+class Event(StatesGroup):
+    photo = State()
+    name = State()
+    link = State()
+    chat_id = State()
+    prizes = State()
+    time = State()
+    
+class Balance(StatesGroup):
+    tg_id = State()
+    amount = State() 
