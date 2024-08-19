@@ -35,6 +35,22 @@ def menu_kb():
 )
 
 
+def profile_kb():
+    return InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text='`🏅 Список достижений`', callback_data=f'achievement')]
+    ]
+)
+
+
+def back_to_profile_kb():
+    return InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text='`🔙 Обратно`', callback_data=f'back_to_profile')]
+    ]
+)
+
+
 def create_long_confirmation():
     return InlineKeyboardMarkup(
     inline_keyboard=[

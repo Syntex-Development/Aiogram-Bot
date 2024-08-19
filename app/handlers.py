@@ -244,12 +244,24 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 
 
 
-#Главное меню
+#Main menu
 
+#Profile
 @router.callback_query(F.data == 'profile')
-async def profile(callback: CallbackQuery):
+async def profile(callback: CallbackQuery, state: FSMContext):
 
     #TODO: Подставить значения из БД!
+    tg_id = ... # получить TG ID из базы данных 
+    balance = ... # получить баланс из базы данных 
+    completed_tasks_count = ... # получить количество выполненных заданий из базы данных
+    lvl = ... # получить уровень из базы данных
+    taked_achievements_count = ... # получить количество полученных достижений из базы данных 
+    tg_bot_link = ... # получить ссылку на бота
+    refferals_count = ... # получить количество рефералов из базы данных
+    earned_by_refferals = ... # получить заработок с рефералов из базы данных
+    count_of_withdrawal = ... # получить количество выводов из базы данных
+    withdrawal_sum = ... # получить сумму выводов из базы данных
+
     info_message = f"""
     🐵 **Ваш профиль:**
 
@@ -273,4 +285,31 @@ async def profile(callback: CallbackQuery):
     🪙 **На сумму:** {withdrawal_sum} UC
     """
 
-    await callback.answer(text=info_message,reply_markup=kb.menu_kb())
+    await callback.edit_text(text=info_message,reply_markup=kb.profile_kb())
+
+
+@router.callback_query(F.data == 'achievements')
+async def achievement_handler(callback: CallbackQuery, state: FSMContext):
+    #TODO: Подставить значения из БД!
+    achievements = ... # получить список достижений из базы данных
+    achievements_list = "" 
+
+    for achievement in achievements:
+        name_achievement = achievement.name # получить название достижения
+        achievement_reward = achievement.reward # получить награду за достижение 
+        achievement_status = " " if achievement.is_completed else " " # проверить, получено ли достижение 
+
+        achievements_list += f"""
+  Достижение: {name_achievement} | Статус: {achievement_status}
+        - Награда за получения достижения: {achievement_reward}
+        """
+
+    await callback.edit_text(text=f"""
+ Список полученных достижений:
+    {achievements_list}
+    """, reply_markup=kb.back_to_profile_kb())
+
+
+@router.callback_query(F.data == 'back_to_profile')
+async def back_to_profile(callback: CallbackQuery, state: FSMContext):
+    await profile(callback, state)
