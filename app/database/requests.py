@@ -112,7 +112,7 @@ async def set_rank(tg_id, ammount):
         await session.execute(update(User).where(User.tg_id == tg_id).values(balance=ammount))
         await session.commit()
 
-
+#Tasks
 async def get_tasks(tg_id, message):
     async with async_session() as session:
         user = session.query(User).filter(User.tg_id == tg_id).first()
@@ -137,3 +137,35 @@ async def get_task_by_id(task_id):
     async with async_session() as session:
         task = session.query(Task).filter(Task.id == task_id).first()
         return task
+    
+
+#Top users
+async def get_top_users(limit: int):
+    async with async_session() as session:
+        top_users = session.query(User).order_by(User.refferals_count.desc()).limit(limit).all() 
+        return top_users 
+
+async def get_user_top_position(user_id: int):
+    async with async_session() as session:
+        user = session.query(User).filter(User.tg_id == user_id).first()
+        if user and user.is_hidden_in_top:
+            return None
+        top_users = session.query(User).order_by(User.refferals_count.desc()).all()
+        position = 0
+        for i, user_in_top in enumerate(top_users):
+            if user_in_top.tg_id == user_id:
+                position = i + 1
+                break
+        return position
+
+async def hide_user_in_top(user_id: int):
+    async with async_session() as session:
+        user = session.query(User).filter(User.tg_id == user_id).first()
+        user.is_hidden_in_top = True
+        await session.commit()
+
+async def show_user_in_top(user_id: int):
+    async with async_session() as session:
+        user = session.query(User).filter(User.tg_id == user_id).first()
+        user.is_hidden_in_top = False
+        await session.commit()

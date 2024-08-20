@@ -250,6 +250,7 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 #Main menu
 
 #Profile
+#TODO: ПЕРЕДЛАТЬ INLINE НА BUTTON
 @router.callback_query(F.data == 'profile')
 async def profile(callback: CallbackQuery, state: FSMContext):
 
@@ -397,3 +398,51 @@ async def check_handler(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("back_"))
 async def back_handler(callback: CallbackQuery, state: FSMContext):
     await tasks_handler(callback, state)
+
+
+@router.message(F.text == 'ТОП')
+async def top(message: Message):
+    top_users = await rq.get_top_users(limit=10)
+    user_top_position = await rq.get_user_top_position(message.from_user.id)
+    top_text = "🏆 ТОП пользователей бота\n💠 Топ по приглашенным рефералам:\n\n"
+    for i, user in enumerate(top_users):
+        top_text += f"{i+1}# {user.username} - {user.refferals_count} приглашено\n"
+
+    if user_top_position:
+        user_position_text = f"Ваше место в топе: {user_top_position}"
+    else:
+        user_position_text = "Вы скрыли себя"
+
+    keyboard = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton(text="🙈 Скрыть меня" if user_top_position else "🙉 Показать меня", callback_data="hide_me" if user_top_position else "show_me")
+    ).add(
+        InlineKeyboardButton(text="🔄 Обновить ТОП", callback_data="refresh_top")
+    )
+
+    await message.answer(
+        f"{top_text}\n\n{user_position_text}",
+        reply_markup=keyboard
+    )
+
+
+@router.callback_query(F.data == 'hide_me')
+async def hide_me_handler(callback: CallbackQuery):
+    await rq.hide_user_in_top(callback.from_user.id)
+    await callback.message.edit_text(
+        f"Вы скрыли себя в топе",
+        reply_markup=kb.refresh_top_kb()
+    )
+
+
+@router.callback_query(F.data == 'show_me')
+async def show_me_handler(callback: CallbackQuery):
+    await rq.show_user_in_top(callback.from_user.id)
+    await callback.message.edit_text(
+        f"Теперь вы будете отображаться в топе",
+        reply_markup=kb.refresh_top_kb()
+    )
+
+
+@router.callback_query(F.data == 'refresh_top')
+async def refresh_top_handler(callback: CallbackQuery):
+    await top(callback.message) 
