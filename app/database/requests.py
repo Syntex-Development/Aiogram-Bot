@@ -1,6 +1,6 @@
 from aiogram.types import Message
 from app.database.models import async_session
-from app.database.models import User, Admin, SecretCode, Event
+from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task
 from sqlalchemy import select, update, delete
 
 
@@ -30,6 +30,12 @@ async def user(tg_id):
 async def set_balance(tg_id, balance):
     async with async_session() as session:
         await session.execute(update(User).where(User.tg_id == tg_id).values(balance=balance))
+        await session.commit()
+
+async def add_balance(tg_id, amount):
+    async with async_session() as session:
+        user = session.query(User).filter(User.tg_id == tg_id).first()
+        user.balance += amount
         await session.commit()
 
 async def balance(tg_id):
@@ -105,4 +111,29 @@ async def set_rank(tg_id, ammount):
     async with async_session() as session:
         await session.execute(update(User).where(User.tg_id == tg_id).values(balance=ammount))
         await session.commit()
-    
+
+
+async def get_tasks(tg_id, message):
+    async with async_session() as session:
+        user = session.query(User).filter(User.tg_id == tg_id).first()
+        tasks = session.query(Task).filter(Task.is_active == True).all()
+
+        available_tasks = []
+        for task in tasks:
+            completion = session.query(TaskCompletion).filter(
+                TaskCompletion.user_id == user.id,
+                TaskCompletion.task_id == task.id
+            ).first()
+
+            if not completion:
+                available_tasks.append(task)
+
+        if not available_tasks:
+            return False
+        return available_tasks
+
+
+async def get_task_by_id(task_id):
+    async with async_session() as session:
+        task = session.query(Task).filter(Task.id == task_id).first()
+        return task

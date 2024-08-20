@@ -1,8 +1,11 @@
 import app.database.requests as rq
 import app.keyboards as kb
+
 from aiogram.types import Message
 from aiogram import Bot
+from aiogram.methods import GetChatMember
 
+import logging as logger
 
 
         
@@ -48,3 +51,17 @@ async def in_chat(user, link):
 
 class Events:
     pass
+
+
+async def check_channel_sub(user_id: int, channel_username: str):
+    try:
+        chat_member = GetChatMember(chat_id=f"@{channel_username}", user_id=user_id)
+        logger.info(f"User {user_id} subscription status for {channel_username}")
+        return True
+    except Exception as e:
+        if "Bad Request: member list is inaccessible" in str(e):
+            logger.error(
+            f"Access to member list is restricted for channel {channel_username}. User {user_id} cannot be checked.")
+        else:
+            logger.error(f"Error checking subscription for user {user_id} in channel {channel_username}: {e}")
+        return False

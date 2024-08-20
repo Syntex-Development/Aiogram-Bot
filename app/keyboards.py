@@ -38,7 +38,8 @@ def menu_kb():
 def profile_kb():
     return InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='`🏅 Список достижений`', callback_data=f'achievement')]
+        [InlineKeyboardButton(text='✨Задания', callback_data='tasks')],
+        [InlineKeyboardButton(text='`🏅Список достижений`', callback_data=f'achievement')]
     ]
 )
 

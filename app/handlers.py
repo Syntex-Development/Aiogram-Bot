@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from textwrap import dedent as dd
@@ -13,6 +13,9 @@ from . import states
 import app.resources.tools as tools
 import app.database.requests as rq 
 import app.keyboards as kb
+
+import logging
+
 
 
 router = Router()
@@ -313,3 +316,84 @@ async def achievement_handler(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == 'back_to_profile')
 async def back_to_profile(callback: CallbackQuery, state: FSMContext):
     await profile(callback, state)
+
+
+@router.callback_query(F.data == 'tasks')
+async def tasks_handler(callback: CallbackQuery, state: FSMContext):
+    tg_id = callback.from_user.id
+    message = callback.message
+    tasks = await rq.get_tasks(tg_id, message)
+
+    if tasks is False:
+        await callback.message.edit_text('❌ В данный момент для вас нет доступных заданий.')
+    elif tasks:
+        keyboard = InlineKeyboardMarkup(row_width=1)
+        for task in tasks:
+            keyboard.add(
+                InlineKeyboardButton(
+                    text=task.name, 
+                    callback_data=f"task_{task.id}" 
+                )
+            )
+
+        await callback.message.edit_text(
+            "📋 Вот список доступных заданий для вас:", 
+            reply_markup=keyboard
+        )
+
+
+@router.callback_query(F.data.startswith("task_"))
+async def task_handler(callback: CallbackQuery, state: FSMContext):
+    task_id = int(callback.data.split("_")[1])
+    
+    task = await rq.get_task_by_id(task_id) 
+    if task:
+        #TODO: ПОДСТАВЬ ЗНАЧЕНИЯ ИЗ БАЗЫ ДАННЫХ.
+        task_name = task.name 
+        task_execute_limit = task.execute_limit
+        task_reward = task.reward 
+        task_channel_link = task.channel_link 
+        left_time = task.left_time
+
+        task_description = f"""
+        📋 Задание #{task_id}
+
+        📄 Имя задания: {task_name}
+        """
+
+        if task.category != "TIME":
+            task_description += f"🗒 Количество выполнений: {task_execute_limit}n"
+        else:
+            task_description += f"⌛️ Истекает через: {left_time}n"
+
+        task_description += f"💵 Награда за задание: {task_reward}nn" 
+        task_description += "⚠️ Примечание! В случае, если вы отпишетесь от канала после выполнения задания, вы можете быть оштрафованы на сумму, которая была выдана в виде награды. Баланс может уйти в минус, будьте внимательны.nn"
+
+        keyboard = InlineKeyboardMarkup(row_width=1).add(
+            InlineKeyboardButton(text="🔗 Ссылка на канал", url=task_channel_link),
+            InlineKeyboardButton(text="✅ Проверить", callback_data=f"check_{task_id}"),
+            InlineKeyboardButton(text="🔙 Обратно", callback_data=f"back_{task_id}")
+        )
+
+        await callback.message.edit_text(task_description, reply_markup=keyboard)
+    else:
+        await callback.message.edit_text("❌ Задание не найдено")     
+
+@router.callback_query(F.data.startswith("check_"))
+async def check_handler(callback: CallbackQuery, state: FSMContext):
+    task_id = int(callback.data.split("_")[1])
+    task = await rq.get_task_by_id(task_id)
+    if task:
+        is_subscribed = await tools.check_channel_sub(callback.from_user.id, task.channel_id) 
+        if is_subscribed:
+            await callback.message.edit_text("✅ Вы подписаны на канал!", reply_markup=kb.profile_kb())
+            try:
+                rq.add_balance(tg_id=callback.from_user.id, amount=task.reward)
+            except Exception as e:
+                logging.error(e)
+        else:
+            await callback.message.edit_text("❌ Вы не подписаны на канал!", reply_markup=kb.profile_kb())
+
+@router.callback_query(F.data.startswith("back_"))
+async def back_handler(callback: CallbackQuery, state: FSMContext):
+    await tasks_handler(callback, state)
