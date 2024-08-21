@@ -57,6 +57,7 @@ class User(Base):
     # is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
+    in_dice_game: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # referrals: Mapped[list['User']] = relationship('User', backref='referrer', remote_side=[id])
     # tasks_completed: Mapped[list['TaskCompletion']] = relationship('TaskCompletion', back_populates='user')

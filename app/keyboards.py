@@ -67,12 +67,33 @@ def menu_kb():
                 KeyboardButton(text='💸 Вывод UC')
             ],
             [
+                KeyboardButton(text='🎲Мини-игры')
+            ],
+            [
                 KeyboardButton(text='❓ Информация')
             ]
         ]
     )
 
 
+#mini-games
+def games():
+    return InlineKeyboardMarkup(row_width=1, inline_keyboard=[
+        [InlineKeyboardButton(text="Кости", callback_data="dice")]
+    ])
+
+#5,30,60
+
+def bet():
+    return InlineKeyboardMarkup(row_width=1, inline_keyboard=[
+        [InlineKeyboardButton(text='5 UC', callback_data='5')],
+        [InlineKeyboardButton(text='30 UC', callback_data='30')],
+        [InlineKeyboardButton(text='60 UC', callback_data='60')]
+    ])
+
+
+
+#profile
 def back_to_profile_kb():
     return InlineKeyboardMarkup(
     inline_keyboard=[

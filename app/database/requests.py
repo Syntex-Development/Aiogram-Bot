@@ -213,3 +213,16 @@ async def update_withdrawal_stat():
         else:
             session.add(Withdrawal())
         await session.commit()
+
+
+#mini-games
+async def find_opponent(tg_id: int, bet_amount: int):
+    async with async_session() as session:
+        opponent = await session.execute(
+            select(User).where(
+                User.tg_id != tg_id, 
+                User.balance >= bet_amount, 
+                User.in_dice_game == False
+            )
+        )
+        return opponent.scalar_one_or_none()

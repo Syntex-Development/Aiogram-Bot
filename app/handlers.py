@@ -3,23 +3,28 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.client.default import DefaultBotProperties
-from textwrap import dedent as dd
-from types import SimpleNamespace as asdataclass
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from textwrap import dedent as dd
+from types import SimpleNamespace as asdataclass
 
 from app.middlewares import TestMiddleware1, TestMiddleware2
-from config import config
 from . import filters
 from . import states
+
+from random import randint
+
+from config import config
+
 import app.resources.tools as tools
 import app.database.requests as rq 
 import app.keyboards as kb
 
 import logging
 
-from config import config
 
+
+import asyncio
 
 
 router = Router()
@@ -364,12 +369,11 @@ async def task_handler(callback: CallbackQuery):
     
     task = await rq.get_task_by_id(task_id) 
     if task:
-        #TODO: ПОДСТАВЬ ЗНАЧЕНИЯ ИЗ БАЗЫ ДАННЫХ.
         task_name = task.name 
         task_execute_limit = task.execute_limit
         task_reward = task.reward 
         task_channel_link = task.channel_link 
-        left_time = task.left_time
+        left_time = task.left_time #TODO FIX
 
         task_description = f"""
         📋 Задание #{task_id}
@@ -568,3 +572,76 @@ async def cancel_review_handler(callback: CallbackQuery, state: FSMContext):
 async def dont_leave_review_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text("Вы не оставили отзыв.", reply_markup=kb.profile_kb())
     await state.clear()
+
+
+@router.message(F.text == '🎲Мини-игры')
+async def mini_games(message: Message):
+    await message.answer('Выберите мини-игру', reply_markup=kb.games())
+
+
+@router.callback_query(F.data == 'dice')
+async def dice(callback: CallbackQuery):
+    message_dice = """<b>Правила игры в кости</b>
+                    \n- Каждый игрок бросает кубик.
+                    \n- Выигрывает игрок, у которого выпало наибольшее число очков.
+                    \n- В случае ничьей, победителя нет.
+                    """
+    await callback.message.edit_text(text=message_dice,parse_mode='HTML', reply_markup=kb.bet())
+
+
+@router.callback_query(lambda c: c.data in ['5', '30', '60'])
+async def process_bet(callback: CallbackQuery, state: FSMContext):
+    bet_amount = int(callback.data)
+    await state.update_data(bet_amount=bet_amount)
+    await callback.message.edit_text(f"Вы выбрали ставку: {bet_amount} UC. Ожидайте соперника...", reply_markup=None)
+    
+    opponent = await rq.find_opponent(callback.from_user.id, bet_amount)
+    if opponent:
+        await state.set_state(state.DiceGame.bet_amount)
+        await play_dice(callback.from_user.id, opponent, bet_amount, state)
+    else:
+        await callback.message.edit_text(f"Соперника с такой же ставкой пока нет. Подождите...", reply_markup=None)
+        await asyncio.sleep(5)
+        await process_bet(callback, state)
+
+
+async def play_dice(player1_id: int, player2_id: int, bet_amount: int, state: FSMContext):
+    player1_roll = randint(1, 6)
+    player2_roll = randint(1, 6)
+    if player1_roll > player2_roll:
+        winner_id = player1_id
+        winner_name = (await rq.get_user_by_id(player1_id)).username
+    elif player2_roll > player1_roll:
+        winner_id = player2_id
+        winner_name = (await rq.get_user_by_id(player2_id)).username
+    else:
+        winner_id = None
+        winner_name = None
+
+    if winner_id:
+        await rq.add_balance(winner_id, bet_amount)
+        await rq.add_balance(player1_id if winner_id == player2_id else player2_id, -bet_amount)
+    else:
+        await rq.add_balance(player1_id, -bet_amount)
+        await rq.add_balance(player2_id, -bet_amount)
+
+    if winner_id:
+        await state.finish()
+        await (await rq.get_user_by_id(player1_id)).message.edit_text(
+            f"Результат игры: Вы - {player1_roll}, Соперник - {player2_roll}\nПобедитель: {winner_name}",
+            reply_markup=kb.profile_kb()
+        )
+        await (await rq.get_user_by_id(player2_id)).message.edit_text(
+            f"Результат игры: Вы - {player2_roll}, Соперник - {player1_roll}\nПобедитель: {winner_name}",
+            reply_markup=kb.profile_kb()
+        )
+    else:
+        await state.finish()
+        await (await rq.get_user_by_id(player1_id)).message.edit_text(
+            f"Результат игры: Вы - {player1_roll}, Соперник - {player2_roll}\nНичья!",
+            reply_markup=kb.profile_kb()
+        )
+        await (await rq.get_user_by_id(player2_id)).message.edit_text(
+            f"Результат игры: Вы - {player2_roll}, Соперник - {player1_roll}\nНичья!",
+            reply_markup=kb.profile_kb()
+        )
