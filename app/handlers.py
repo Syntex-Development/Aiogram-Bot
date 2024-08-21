@@ -258,21 +258,29 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 
 
 #Profile
-#TODO: ПЕРЕДЛАТЬ INLINE НА BUTTON
 @router.message(F.text == '🐵 Профиль')
 async def profile(message: Message, state: FSMContext):
+    tg_id = message.from_user.id
+    user = rq.user(tg_id)
 
-    #TODO: Подставить значения из БД!
-    tg_id = ... # получить TG ID из базы данных 
-    balance = ... # получить баланс из базы данных 
-    completed_tasks_count = ... # получить количество выполненных заданий из базы данных
-    lvl = ... # получить уровень из базы данных
-    taked_achievements_count = ... # получить количество полученных достижений из базы данных 
-    tg_bot_link = ... # получить ссылку на бота
-    refferals_count = ... # получить количество рефералов из базы данных
-    earned_by_refferals = ... # получить заработок с рефералов из базы данных
-    count_of_withdrawal = ... # получить количество выводов из базы данных
-    withdrawal_sum = ... # получить сумму выводов из базы данных
+    withdrawal_stat = await rq.get_stat_withdrawal()
+
+    if withdrawal_stat:
+        bot_withdrawal_count = withdrawal_stat.bot_withdrawal_count
+        bot_withdrawal_sum = withdrawal_stat.bot_withdrawal_sum
+    else:
+        bot_withdrawal_count = 0
+        bot_withdrawal_sum = 0
+
+    balance = user.balance
+    completed_tasks_count = user.task_completed
+    lvl = user.lvl #TODO FIX
+    taked_achievements_count = user.taked_achievements_count #TODO FIX
+    tg_bot_link = 'https://t.me/koshmrUCbot'
+    refferals_count = rq.get_referral_count_by_tg_id(tg_id)
+    earned_by_refferals = user.referral_earnings
+    count_of_withdrawal = bot_withdrawal_count
+    withdrawal_sum = bot_withdrawal_sum
 
     info_message = f"""
     🐵 **Ваш профиль:**

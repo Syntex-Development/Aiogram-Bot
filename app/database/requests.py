@@ -1,7 +1,8 @@
 from aiogram.types import Message
 from app.database.models import async_session
 from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
+
 
 
 
@@ -109,6 +110,16 @@ async def set_rank(tg_id, ammount):
     async with async_session() as session:
         await session.execute(update(User).where(User.tg_id == tg_id).values(balance=ammount))
         await session.commit()
+
+
+#Profile
+        
+async def get_referral_count_by_tg_id(tg_id: int):
+    async with async_session() as session:
+        result = await session.execute(
+            select(func.count(User.tg_id)).where(User.referrer_id == tg_id)
+        )
+        return result.scalar()
 
 #Tasks
 async def get_tasks(tg_id, message):

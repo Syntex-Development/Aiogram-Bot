@@ -53,6 +53,7 @@ class User(Base):
     referrer_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
     rank_id: Mapped[int] = mapped_column(Integer, default=0)
     initial_task_completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    task_completed: Mapped[int] = mapped_column(BigInteger, default=0)
     # is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
