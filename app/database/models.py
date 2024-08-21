@@ -94,12 +94,13 @@ class User(Base):
 #     issued_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 #     user: Mapped['User'] = relationship('User', back_populates='issued_codes')
     
-    
-    
 
-    
-    
-    
+class Withdrawal(Base):
+    __tablename__ = 'Withdrawal'
+
+    bot_withdrawal_count: Mapped[int] = mapped_column(BigInteger, default=0)
+    bot_withdrawal_sum: Mapped[int] = mapped_column(BigInteger, default=0)
+
     
 async def create_db():
     async with engine.begin() as conn:

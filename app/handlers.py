@@ -1,7 +1,8 @@
-from aiogram import F, Router
+from aiogram import F, Router, Bot
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
+from aiogram.client.default import DefaultBotProperties
 from textwrap import dedent as dd
 from types import SimpleNamespace as asdataclass
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -17,11 +18,16 @@ import app.keyboards as kb
 
 import logging
 
+from config import config
+
 
 
 router = Router()
 router.callback_query.outer_middleware(TestMiddleware1())
 router.message.outer_middleware(TestMiddleware2())
+
+
+bot = Bot(token=config.TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
 
 
 @router.callback_query(F.data == 'сlose__')
@@ -452,3 +458,105 @@ async def show_me_handler(callback: CallbackQuery):
 @router.callback_query(F.data == 'refresh_top')
 async def refresh_top_handler(callback: CallbackQuery):
     await top(callback.message)
+
+
+@router.message(F.text == '💸 Вывод UC')
+async def withdrawal_uc(message: Message):
+
+    user = rq.set_user(message)
+    if user.balance < 60:
+        await message.answer('Минимальная сумма вывода: <b>60 UC</b>', parse_mode='HTML', reply_markup=kb.back_to_profile_kb())
+    elif user.balance >= 60:
+        withdrawal_stat = await rq.get_stat_withdrawal()
+
+        if withdrawal_stat:
+            bot_withdrawal_count = withdrawal_stat.bot_withdrawal_count
+            bot_withdrawal_sum = withdrawal_stat.bot_withdrawal_sum
+        else:
+            bot_withdrawal_count = 0
+            bot_withdrawal_sum = 0
+
+        message_text = (
+            '💸 Вы можете вывести 60 UC в виде кода активации. Для этого нажмите кнопку ниже.'
+            '\n📊 Статистика выводов в боте:'
+            '\n- ✨ Количество выводов: {bot_withdrawal_count}'
+            '\n- 💵 На сумму: {bot_withdrawal_sum} UC'
+        ).format(bot_withdrawal_count=bot_withdrawal_count, bot_withdrawal_sum=bot_withdrawal_sum) 
+
+
+        await message.answer(text=message_text, reply_markup=kb.uc_count())
+
+
+@router.callback_query(F.data == 'withdrawal_uc')
+async def withdrawal_handler(callback: CallbackQuery, state: FSMContext):
+    user = await rq.get_user_by_id(callback.from_user.id)
+    if user.balance >= 60:
+        code = await rq.get_activation_code()
+        if code:
+            await rq.set_balance(callback.from_user.id, user.balance - 60)
+            await rq.update_withdrawal_stat()
+            await callback.message.edit_text(
+                f"""
+                ✅ Вывод успешно выполнен!
+
+                🗝 Ваш Код Активации: {code}
+
+                ℹ️ Инструкция по активации: https://vk.cc/cyfkVG
+
+                ✨ Оставьте отзыв и получите уже первое достижение с наградой!
+                👇 Напишите ваши впечатления о боте и о правдивости работы бота и он попадет в наш чат с отзывами:
+                """,
+                reply_markup=kb.review_kb() 
+            )
+            await state.set_state(states.ReviewState.review_text)
+        else:
+            await callback.message.edit_text("❌ Ошибка получения кода. Попробуйте позже.")
+    else:
+        await callback.message.edit_text('❌ Недостаточно средств.', reply_markup=kb.back_to_profile_kb())
+
+
+@router.message(states.ReviewState.review_text)
+async def process_review(message: Message, state: FSMContext):
+    if len(message.text) > 128 or len(message.text.replace(" ", "").replace(",", "").replace(".", "")) > 128 - 4:
+        await message.answer('Отзыв слишком длинный. Сократите его до 128 символов', reply_markup=kb.back_to_profile_kb())
+        await state.clear()
+    else:
+        await state.update_data(review_text=message.text)
+        await message.answer(
+            f"""
+            ✍️ Ваш отзыв:
+            {message.text}
+
+            ⚠️ Учтите! Отправка отзыва с матерными словами, содержащий бессмысленные символы или большое количество эмодзи, будут удалены и у вас будет риск получить штрафы до 60 UC.
+            """,
+            reply_markup=kb.confirm_review_kb()
+        )
+
+
+@router.callback_query(F.data == 'confirm_review')
+async def confirm_review_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    review_text = data.get('review_text')
+    if review_text:
+        user = await rq.user(callback.from_user.id)
+        username = user.username 
+
+        await bot.send_message(chat_id="-1002228388262", text=f"Отзыв от {username}:\n{review_text}")
+        await callback.message.edit_text(
+            "✅ Отзыв успешно отправлен!", reply_markup=kb.profile_kb() 
+        )
+        await state.clear()
+    else:
+        await callback.message.edit_text("❌ Ошибка отправки отзыва. Попробуйте позже.")
+        await state.clear()
+
+
+@router.callback_query(F.data == 'cancel_review')
+async def cancel_review_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("❌ Отправка отзыва отменена.", reply_markup=kb.profile_kb())
+    await state.clear()
+
+@router.callback_query(F.data == 'dont_leave_review')
+async def dont_leave_review_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("Вы не оставили отзыв.", reply_markup=kb.profile_kb())
+    await state.clear()

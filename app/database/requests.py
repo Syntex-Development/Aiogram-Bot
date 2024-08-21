@@ -1,6 +1,6 @@
 from aiogram.types import Message
 from app.database.models import async_session
-from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task
+from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal
 from sqlalchemy import select, update, delete
 
 
@@ -22,9 +22,7 @@ async def set_user(message : Message):
 
 async def user(tg_id):
     async with async_session() as session:
-        return await session.scalar(select(User).where(User.tg_id == tg_id))
-    
-    
+        return await session.scalar(select(User).where(User.tg_id == tg_id))    
 
 
 async def set_balance(tg_id, balance):
@@ -168,4 +166,39 @@ async def show_user_in_top(user_id: int):
     async with async_session() as session:
         user = session.query(User).filter(User.tg_id == user_id).first()
         user.is_hidden_in_top = False
+        await session.commit()
+
+
+#Withdrawal
+async def get_stat_withdrawal():
+    async with async_session() as session:
+        stat = await session.execute(select(Withdrawal))
+        return stat.scalar_one_or_none()
+        
+
+async def get_codes_count():
+    async with async_session() as session:
+        #сделать получение кол-ва доступных кодов
+        pass
+
+
+async def get_activation_code():
+    async with async_session() as session:
+        code = session.query(SecretCode).filter(SecretCode.is_used == False).first()
+        if code:
+            code.is_used = True
+            await session.commit()
+            return code.code
+        else:
+            return None
+
+
+async def update_withdrawal_stat():
+    async with async_session() as session:
+        withdrawal_stat = session.query(Withdrawal).first()
+        if withdrawal_stat:
+            withdrawal_stat.bot_withdrawal_count += 1
+            withdrawal_stat.bot_withdrawal_sum += 60
+        else:
+            session.add(Withdrawal())
         await session.commit()

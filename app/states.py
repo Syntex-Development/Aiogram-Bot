@@ -21,3 +21,6 @@ class Event(StatesGroup):
 class Balance(StatesGroup):
     tg_id = State()
     amount = State() 
+
+class ReviewState(StatesGroup):
+    review_text = State() 

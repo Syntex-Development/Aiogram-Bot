@@ -5,6 +5,8 @@ from aiogram.types import (
     KeyboardButton
 )
 
+import database.requests as rq
+
 
 
 
@@ -31,7 +33,28 @@ def create_panel():
     ]
 )
 
+#withdrawal
+def uc_count():
+    codes_count = rq.get_codes_count()
+    return InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text=f'`60 UC | {codes_count}`', callback_data='withdrawal_uc')]
+    ]
+)
 
+def review_kb():
+    return InlineKeyboardMarkup(row_width=1, inline_keyboard=[
+        [InlineKeyboardButton(text="Не хочу оставить отзыв", callback_data="dont_leave_review")]
+    ])
+
+def confirm_review_kb():
+    return InlineKeyboardMarkup(row_width=1, inline_keyboard=[
+        [InlineKeyboardButton(text="Подтвердить", callback_data="confirm_review"),
+         InlineKeyboardButton(text="Отменить", callback_data="cancel_review")]
+    ])
+
+
+#menu
 def menu_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -48,15 +71,6 @@ def menu_kb():
             ]
         ]
     )
-
-
-def profile_kb():
-    return InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text='✨Задания', callback_data='tasks')],
-        [InlineKeyboardButton(text='`🏅Список достижений`', callback_data=f'achievement')]
-    ]
-)
 
 
 def back_to_profile_kb():
