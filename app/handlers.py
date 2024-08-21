@@ -4,6 +4,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from textwrap import dedent as dd
 from types import SimpleNamespace as asdataclass
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
 from app.middlewares import TestMiddleware1, TestMiddleware2
@@ -249,10 +250,11 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 
 #Main menu
 
+
 #Profile
 #TODO: ПЕРЕДЛАТЬ INLINE НА BUTTON
-@router.callback_query(F.data == 'profile')
-async def profile(callback: CallbackQuery, state: FSMContext):
+@router.message(F.text == '🐵 Профиль')
+async def profile(message: Message, state: FSMContext):
 
     #TODO: Подставить значения из БД!
     tg_id = ... # получить TG ID из базы данных 
@@ -289,7 +291,7 @@ async def profile(callback: CallbackQuery, state: FSMContext):
     🪙 **На сумму:** {withdrawal_sum} UC
     """
 
-    await callback.edit_text(text=info_message,reply_markup=kb.profile_kb())
+    await message.edit_text(text=info_message,reply_markup=kb.profile_kb())
 
 
 @router.callback_query(F.data == 'achievements')
@@ -316,19 +318,18 @@ async def achievement_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'back_to_profile')
 async def back_to_profile(callback: CallbackQuery, state: FSMContext):
-    await profile(callback, state)
+    await profile(callback.message, state)
 
 
-@router.callback_query(F.data == 'tasks')
-async def tasks_handler(callback: CallbackQuery, state: FSMContext):
-    tg_id = callback.from_user.id
-    message = callback.message
+@router.callback_query(F.text == '🔔 Задания')
+async def tasks_handler(message: Message):
+    tg_id = message.from_user.id
     tasks = await rq.get_tasks(tg_id, message)
 
     if tasks is False:
-        await callback.message.edit_text('❌ В данный момент для вас нет доступных заданий.')
+        await message.edit_text('❌ В данный момент для вас нет доступных заданий.')
     elif tasks:
-        keyboard = InlineKeyboardMarkup(row_width=1)
+        keyboard = InlineKeyboardBuilder()
         for task in tasks:
             keyboard.add(
                 InlineKeyboardButton(
@@ -337,14 +338,14 @@ async def tasks_handler(callback: CallbackQuery, state: FSMContext):
                 )
             )
 
-        await callback.message.edit_text(
+        await message.edit_text(
             "📋 Вот список доступных заданий для вас:", 
-            reply_markup=keyboard
+            reply_markup=keyboard.as_markup()
         )
 
 
 @router.callback_query(F.data.startswith("task_"))
-async def task_handler(callback: CallbackQuery, state: FSMContext):
+async def task_handler(callback: CallbackQuery):
     task_id = int(callback.data.split("_")[1])
     
     task = await rq.get_task_by_id(task_id) 
@@ -381,7 +382,7 @@ async def task_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("❌ Задание не найдено")     
 
 @router.callback_query(F.data.startswith("check_"))
-async def check_handler(callback: CallbackQuery, state: FSMContext):
+async def check_handler(callback: CallbackQuery):
     task_id = int(callback.data.split("_")[1])
     task = await rq.get_task_by_id(task_id)
     if task:
@@ -389,18 +390,18 @@ async def check_handler(callback: CallbackQuery, state: FSMContext):
         if is_subscribed:
             await callback.message.edit_text("✅ Вы подписаны на канал!", reply_markup=kb.profile_kb())
             try:
-                rq.add_balance(tg_id=callback.from_user.id, amount=task.reward)
+                await rq.add_balance(tg_id=callback.from_user.id, amount=task.reward)
             except Exception as e:
                 logging.error(e)
         else:
             await callback.message.edit_text("❌ Вы не подписаны на канал!", reply_markup=kb.profile_kb())
 
 @router.callback_query(F.data.startswith("back_"))
-async def back_handler(callback: CallbackQuery, state: FSMContext):
-    await tasks_handler(callback, state)
+async def back_handler(callback: CallbackQuery):
+    await tasks_handler(callback.message)
 
 
-@router.message(F.text == 'ТОП')
+@router.message(F.text == '🏆 ТОП')
 async def top(message: Message):
     top_users = await rq.get_top_users(limit=10)
     user_top_position = await rq.get_user_top_position(message.from_user.id)
@@ -413,10 +414,15 @@ async def top(message: Message):
     else:
         user_position_text = "Вы скрыли себя"
 
-    keyboard = InlineKeyboardMarkup(row_width=1).add(
-        InlineKeyboardButton(text="🙈 Скрыть меня" if user_top_position else "🙉 Показать меня", callback_data="hide_me" if user_top_position else "show_me")
-    ).add(
-        InlineKeyboardButton(text="🔄 Обновить ТОП", callback_data="refresh_top")
+    keyboard = InlineKeyboardMarkup(
+        row_width=1,
+        inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🙈 Скрыть меня" if user_top_position else "🙉 Показать меня",
+                callback_data="hide_me" if user_top_position else "show_me"
+            )],
+            [InlineKeyboardButton(text="🔄 Обновить ТОП", callback_data="refresh_top")]
+        ]
     )
 
     await message.answer(
@@ -445,4 +451,4 @@ async def show_me_handler(callback: CallbackQuery):
 
 @router.callback_query(F.data == 'refresh_top')
 async def refresh_top_handler(callback: CallbackQuery):
-    await top(callback.message) 
+    await top(callback.message)

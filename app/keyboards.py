@@ -1,5 +1,10 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
+
 
 
 
@@ -28,11 +33,21 @@ def create_panel():
 
 
 def menu_kb():
-    return InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text='Профиль', callback_data=f'profile')]
-    ]
-)
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text='🐵 Профиль'),
+                KeyboardButton(text='🔔 Задания')
+            ],
+            [
+                KeyboardButton(text='🏆 ТОП'),
+                KeyboardButton(text='💸 Вывод UC')
+            ],
+            [
+                KeyboardButton(text='❓ Информация')
+            ]
+        ]
+    )
 
 
 def profile_kb():
