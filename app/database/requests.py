@@ -1,7 +1,8 @@
 from aiogram.types import Message
 from app.database.models import async_session
-from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal
+from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal, Achievements
 from sqlalchemy import select, update, delete, func
+from sqlalchemy.orm import selectinload
 
 
 
@@ -215,7 +216,7 @@ async def update_withdrawal_stat():
         await session.commit()
 
 
-#mini-games
+#Mini-games
 async def find_opponent(tg_id: int, bet_amount: int):
     async with async_session() as session:
         opponent = await session.execute(
@@ -225,4 +226,30 @@ async def find_opponent(tg_id: int, bet_amount: int):
                 User.in_dice_game == False
             )
         )
-        return opponent.scalar_one_or_none()
+        
+#Achievements
+async def add_achievement(tg_id: int, achievement_name: str):
+    async with async_session() as session:
+        user = await session.execute(
+            select(User).options(selectinload(User.achievements)).where(User.tg_id == tg_id)
+        )
+        user = user.scalar_one_or_none()
+
+        if user:
+            existing_achievement = next(
+                (
+                    achievement
+                    for achievement in user.achievements
+                    if achievement.name == achievement_name
+                ),
+                None,
+            )
+            if not existing_achievement:
+                new_achievement = Achievements(user=user, name=achievement_name)
+                session.add(new_achievement)
+                await session.commit()
+                return True
+            else:
+                return False
+        else:
+            return False

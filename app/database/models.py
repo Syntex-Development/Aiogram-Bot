@@ -54,47 +54,58 @@ class User(Base):
     rank_id: Mapped[int] = mapped_column(Integer, default=0)
     initial_task_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     task_completed: Mapped[int] = mapped_column(BigInteger, default=0)
-    # is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    referrals: Mapped[list['User']] = relationship('User', backref='referrer', remote_side=[id])
+    tasks_completed: Mapped[list['TaskCompletion']] = relationship('TaskCompletion', back_populates='user')
+    issued_codes: Mapped[list['IssuedCode']] = relationship('IssuedCode', back_populates='user')
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
     in_dice_game: Mapped[bool] = mapped_column(Boolean, default=False)
-    
-    # referrals: Mapped[list['User']] = relationship('User', backref='referrer', remote_side=[id])
-    # tasks_completed: Mapped[list['TaskCompletion']] = relationship('TaskCompletion', back_populates='user')
-    # issued_codes: Mapped[list['IssuedCode']] = relationship('IssuedCode', back_populates='user')
+    achievements: Mapped[list["Achievements"]] = relationship(
+        "Achievements", back_populates="user"
+    )
 
-# class Task(Base):
-#     __tablename__ = 'tasks'
-    
-#     id: Mapped[int] = mapped_column(primary_key=True)
-#     category: Mapped[str] = mapped_column(String(255))
-#     link: Mapped[str] = mapped_column(String(255))
-#     chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-#     reward: Mapped[float] = mapped_column(Float)
-#     max_completions: Mapped[int] = mapped_column(BigInteger)
-#     current_completions: Mapped[int] = mapped_column(BigInteger, default=0)
-#     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-#     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-#     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.now)
 
-# class TaskCompletion(Base):
-#     __tablename__ = 'task_completions'
-    
-#     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-#     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
-#     task_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('tasks.id'))
-#     user: Mapped['User'] = relationship('User', back_populates='tasks_completed')
-#     task: Mapped['Task'] = relationship('Task')
+class Achievements(Base):
 
-# class IssuedCode(Base):
-#     __tablename__ = 'issued_codes'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id = mapped_column(Integer, ForeignKey('users.id'))
+    user = relationship("User", back_populates="achievements")
+    name = mapped_column(String(255), nullable=False)
     
-#     id: Mapped[int] = mapped_column(primary_key=True)
-#     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
-#     code: Mapped[str] = mapped_column(String(255))
-#     amount: Mapped[float] = mapped_column(Float, default=60)
-#     issued_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-#     user: Mapped['User'] = relationship('User', back_populates='issued_codes')
+
+class Task(Base):
+    __tablename__ = 'tasks'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category: Mapped[str] = mapped_column(String(255))
+    link: Mapped[str] = mapped_column(String(255))
+    chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    reward: Mapped[float] = mapped_column(Float)
+    max_completions: Mapped[int] = mapped_column(BigInteger)
+    current_completions: Mapped[int] = mapped_column(BigInteger, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.now)
+
+class TaskCompletion(Base):
+    __tablename__ = 'task_completions'
+    
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
+    task_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('tasks.id'))
+    user: Mapped['User'] = relationship('User', back_populates='tasks_completed')
+    task: Mapped['Task'] = relationship('Task')
+
+class IssuedCode(Base):
+    __tablename__ = 'issued_codes'
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey('users.id'))
+    code: Mapped[str] = mapped_column(String(255))
+    amount: Mapped[float] = mapped_column(Float, default=60)
+    issued_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    user: Mapped['User'] = relationship('User', back_populates='issued_codes')
     
 
 class Withdrawal(Base):

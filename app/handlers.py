@@ -280,7 +280,7 @@ async def profile(message: Message, state: FSMContext):
     balance = user.balance
     completed_tasks_count = user.task_completed
     lvl = user.lvl #TODO FIX
-    taked_achievements_count = user.taked_achievements_count #TODO FIX
+    taked_achievements_count = len(user.achievements)
     tg_bot_link = 'https://t.me/koshmrUCbot'
     refferals_count = rq.get_referral_count_by_tg_id(tg_id)
     earned_by_refferals = user.referral_earnings
@@ -409,6 +409,19 @@ async def check_handler(callback: CallbackQuery):
             await callback.message.edit_text("✅ Вы подписаны на канал!", reply_markup=kb.profile_kb())
             try:
                 await rq.add_balance(tg_id=callback.from_user.id, amount=task.reward)
+                achievement_added = await rq.add_achievement(tg_id=callback.from_user.id,achievement_name='Это только начало!')
+                if achievement_added:
+                    achievement_message = (
+                        f"Поздравляю, вы получили достижение!\n\n"
+                        f"**Название:** Это только начало!\n"
+                        f"**Описание:** Вы успешно выполнили свое первое задание!\n\n"
+                        f"**Награда:** 2UC \n"
+                        f"**Как получить:** Выполнить одно задание"
+                    )
+                    await rq.add_balance(tg_id=callback.from_user.id, amount=2)
+
+                    await callback.message.answer(achievement_message, reply_markup=kb.back_to_profile_kb())
+
             except Exception as e:
                 logging.error(e)
         else:
@@ -557,6 +570,18 @@ async def confirm_review_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
             "✅ Отзыв успешно отправлен!", reply_markup=kb.profile_kb() 
         )
+        achievement_added = await rq.add_achievement(tg_id=callback.from_user.id, achievement_name='Ха-Ха, вот и я со своим мнением!')
+        if achievement_added:
+                achievement_message = (
+                    f"Поздравляю, вы получили достижение!\n\n"
+                    f"**Название:** Ха-Ха, вот и я со своим мнением!\n"
+                    f"**Описание:** Вы успешно оставили свой первый отзыв.\n\n"
+                    f"**Награда:** 2UC \n"
+                    f"**Как получить:** Успешно оставить отзыв"
+                )
+                await rq.add_balance(tg_id=callback.from_user.id, amount=2)
+
+                await callback.message.answer(achievement_message, reply_markup=kb.back_to_profile_kb())
         await state.clear()
     else:
         await callback.message.edit_text("❌ Ошибка отправки отзыва. Попробуйте позже.")
