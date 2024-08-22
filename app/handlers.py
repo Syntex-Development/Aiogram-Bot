@@ -2,8 +2,11 @@ from aiogram import F, Router, Bot
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramNotFound
 from aiogram.client.default import DefaultBotProperties
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from textwrap import dedent as dd
 from types import SimpleNamespace as asdataclass
@@ -14,13 +17,14 @@ from . import states
 
 from random import randint
 
-from config import config
+from config import settings
 
 import app.resources.tools as tools
-import app.database.requests as rq 
+from app.database import requests as rq
 import app.keyboards as kb
 
-import logging
+
+from logging import Logger
 
 
 
@@ -32,8 +36,38 @@ router.callback_query.outer_middleware(TestMiddleware1())
 router.message.outer_middleware(TestMiddleware2())
 
 
-bot = Bot(token=config.TOKEN, default=DefaultBotProperties(parse_mode='HTML'))
 
+@router.message(CommandStart())
+async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
+    user_id = message.from_user.id
+    try:
+        referrer_id = message.text.split()[1] if len(message.text.split()) > 1 else None
+        user = await rq.filter_user_id(user_id, session)
+        if not user:
+            user = await rq.set_user(message)
+            if referrer_id and referrer_id.isdigit():
+                referrer_id = int(referrer_id)
+                referrer = await rq.filter_user_id(referrer_id, session)
+                if referrer:
+                    await rq.update_user(session, user_id, referrer_id=referrer_id)
+
+        if user and not user.initial_task_completed:
+            await message.answer(
+                text="👋 Добро пожаловать! Выполните обязательные задания и получите уже первую награду в 2 UC!",
+                reply_markup=await kb.check_user_subscription_and_generate_keyboard(user_id, session, message)
+            )
+        elif user:
+            await message.answer(
+                text=("👋 Добро пожаловать! Вы уже выполнили обязательные задания. "
+                      "Вы можете перейти к другим функциям бота."),
+                reply_markup=await kb.menu_kb(user_id, session)
+            )
+
+    except Exception as e:
+        logger.error(f"Error command /start: {e}")
+    except TelegramNotFound:
+        logger.error(f"User {user_id} not found, unable to send /start message.")
+        
 
 @router.callback_query(F.data == 'сlose__')
 async def panel(callback : CallbackQuery, state: FSMContext):

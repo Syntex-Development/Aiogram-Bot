@@ -1,8 +1,10 @@
 from aiogram.types import Message
 from app.database.models import async_session
-from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal, Achievements
+from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal, Achievements, BaseChannels
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import selectinload
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 
@@ -12,13 +14,17 @@ async def tg_ids():#
     async with async_session() as session:
         return await session.scalars(select(User.tg_id).where(User.initial_task_completed==True))
 
-async def set_user(message : Message):
+async def set_user(message: Message):
     async with async_session() as session:
         user = await session.scalar(select(User).where(User.tg_id == message.from_user.id))
         if not user:
-            referrer_id=int(message.text[7:]) if len(message.text) > 7 else '' 
+            referrer_id = int(message.text[7:]) if len(message.text) > 7 and message.text[7:].isdigit() else None
             tg = message.from_user
-            session.add(User(tg_id=tg.id, username=tg.username, full_name=tg.full_name, referrer_id=referrer_id))
+            username = tg.username if tg.username else ""
+            new_user = User(tg_id=tg.id, username=username, full_name=tg.full_name)
+            if referrer_id:
+                new_user.referrer_id = referrer_id
+            session.add(new_user)
             await session.commit()
         return user
 
@@ -253,3 +259,11 @@ async def add_achievement(tg_id: int, achievement_name: str):
                 return False
         else:
             return False
+        
+#config
+async def get_channels(channels_id: int, session: AsyncSession):
+    result = await session.scalars(select(BaseChannels).filter(BaseChannels.channel_id == channels_id))
+    return result
+
+async def filter_user_id(user_id: int, session: AsyncSession):
+    result = await session.scalars(select(User).filter(User.tg_id == user_id))
