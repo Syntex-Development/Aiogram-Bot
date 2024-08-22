@@ -1,22 +1,15 @@
-from dataclasses import dataclass
-from environs import Env
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import ClassVar
 
+class Settings(BaseSettings):
+    token: str = Field(..., env='TOKEN')
+    database_url: str = Field(..., env='DATABASE_URL')
+    admin: int = Field(..., env='ADMIN')
+    REFERRAL_REWARD: int = 2
+    INITIAL_TASK_REWARD: int = 2
+    REQUIRED_UC_FOR_WITHDRAWAL: int = 60
 
-@dataclass
-class Config:
-    TOKEN : str
-    ADMIN : int
-    DATABASE_URL : str
-    
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(env_file='.env', extra='forbid')
 
-def load_config(path) -> Config:
-    env = Env()
-    env.read_env(path)
-    
-    return Config(
-        env.str("TOKEN"),
-        env.int("ADMIN"),
-        env.str("DATABASE_URL"),
-    )
-    
-config = load_config('.env')
+settings = Settings()
