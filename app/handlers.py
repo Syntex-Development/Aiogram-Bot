@@ -330,11 +330,12 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 
 #Profile
 @router.message(F.text == '🐵 Профиль')
-async def profile(message: Message, state: FSMContext):
+async def profile(message: Message, state: FSMContext, session: AsyncSession):
     tg_id = message.from_user.id
-    user = rq.user(tg_id)
 
-    withdrawal_stat = await rq.get_stat_withdrawal()
+    user = await rq.get_user(tg_id, session)  # Передаем сессию здесь
+
+    withdrawal_stat = await rq.get_stat_withdrawal(session)  # И здесь
 
     if withdrawal_stat:
         bot_withdrawal_count = withdrawal_stat.bot_withdrawal_count
@@ -345,65 +346,44 @@ async def profile(message: Message, state: FSMContext):
 
     balance = user.balance
     completed_tasks_count = user.task_completed
-    lvl = user.lvl #TODO FIX
+    lvl = user.lvl
     taked_achievements_count = len(user.achievements)
     tg_bot_link = 'https://t.me/koshmrUCbot'
-    refferals_count = rq.get_referral_count_by_tg_id(tg_id)
+    refferals_count = await rq.get_referral_count_by_tg_id(tg_id, session)  # И здесь
     earned_by_refferals = user.referral_earnings
     count_of_withdrawal = bot_withdrawal_count
     withdrawal_sum = bot_withdrawal_sum
 
     info_message = f"""
-    🐵 **Ваш профиль:**
+    🐵 Ваш профиль:
 
-    **Информация в боте:**
-    🆔 **Ваш TG ID:** {tg_id}
-    💰 **Ваш баланс:** {balance} UC
-    📋 **Выполнено заданий:** {completed_tasks_count} шт.
+    Информация в боте:
+    🆔 Ваш TG ID: {tg_id}
+    💰 Ваш баланс: {balance} UC
+    📋 Выполнено заданий: {completed_tasks_count} шт.
 
-    **Информация о прокачке:**
-    🥇 **Ваш Уровень:** {lvl}
-    🏅 **Получено достижений:** {taked_achievements_count}
+    Информация о прокачке:
+    🥇 Ваш Уровень: {lvl}
+    🏅 Получено достижений: {taked_achievements_count}
 
-    **Информация о рефералах:**
-    🌟 **Пригласи друга и получи целых 2 UC в придачу!**
-    🔗 **Ваша реферальная ссылка:** {tg_bot_link}?start={tg_id}
-    👥 **Приглашено рефералов:** {refferals_count}
-    💵 **Заработано с рефералов:** +{earned_by_refferals} UC
+    Информация о рефералах:
+    🌟 Пригласи друга и получи целых 2 UC в придачу!
+    🔗 Ваша реферальная ссылка: {tg_bot_link}?start={tg_id}
+    👥 Приглашено рефералов: {refferals_count}
+    💵 Заработано с рефералов: +{earned_by_refferals} UC
 
-    **Информация о выводах:**
-    ✨ **Количество выводов:** {count_of_withdrawal}
-    🪙 **На сумму:** {withdrawal_sum} UC
+    Информация о выводах:
+    ✨ Количество выводов: {count_of_withdrawal}
+    🪙 На сумму: {withdrawal_sum} UC
     """
 
-    await message.edit_text(text=info_message,reply_markup=kb.profile_kb())
+    await message.edit_text(text=info_message, reply_markup=kb.profile_kb())
 
-
-@router.callback_query(F.data == 'achievements')
-async def achievement_handler(callback: CallbackQuery, state: FSMContext):
-    #TODO: Подставить значения из БД!
-    achievements = ... # получить список достижений из базы данных
-    achievements_list = "" 
-
-    for achievement in achievements:
-        name_achievement = achievement.name # получить название достижения
-        achievement_reward = achievement.reward # получить награду за достижение 
-        achievement_status = " " if achievement.is_completed else " " # проверить, получено ли достижение 
-
-        achievements_list += f"""
-  Достижение: {name_achievement} | Статус: {achievement_status}
-        - Награда за получения достижения: {achievement_reward}
-        """
-
-    await callback.edit_text(text=f"""
- Список полученных достижений:
-    {achievements_list}
-    """, reply_markup=kb.back_to_profile_kb())
 
 
 @router.callback_query(F.data == 'back_to_profile')
-async def back_to_profile(callback: CallbackQuery, state: FSMContext):
-    await profile(callback.message, state)
+async def back_to_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await callback.message.answer('Вы были перемещены в меню.', reply_markup=await kb.main_keyboard(callback.from_user.id, session))
 
 
 @router.callback_query(F.text == '🔔 Задания')
@@ -502,9 +482,10 @@ async def back_handler(callback: CallbackQuery):
 async def top(message: Message):
     top_users = await rq.get_top_users(limit=10)
     user_top_position = await rq.get_user_top_position(message.from_user.id)
+    
     top_text = "🏆 ТОП пользователей бота\n💠 Топ по приглашенным рефералам:\n\n"
     for i, user in enumerate(top_users):
-        top_text += f"{i+1}# {user.username} - {user.refferals_count} приглашено\n"
+        top_text += f"{i+1}# {user.username} - {user.referrals.count()} приглашено\n"
 
     if user_top_position:
         user_position_text = f"Ваше место в топе: {user_top_position}"
@@ -554,7 +535,7 @@ async def refresh_top_handler(callback: CallbackQuery):
 @router.message(F.text == '💸 Вывод UC')
 async def withdrawal_uc(message: Message):
 
-    user = rq.set_user(message)
+    user = await rq.set_user(message)
     if user.balance < 60:
         await message.answer('Минимальная сумма вывода: <b>60 UC</b>', parse_mode='HTML', reply_markup=kb.back_to_profile_kb())
     elif user.balance >= 60:
@@ -681,17 +662,35 @@ async def dice(callback: CallbackQuery):
 
 
 @router.callback_query(lambda c: c.data in ['5', '30', '60'])
-async def process_bet(callback: CallbackQuery, state: FSMContext):
+async def process_bet(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+    await callback.message.delete()
     bet_amount = int(callback.data)
+    user = await rq.user(callback.from_user.id)
+
+    if user.balance < bet_amount:
+        await callback.message.answer(
+            f'На вашем счету недостаточно средств!\nВаш баланс: <code>{user.balance} UC</code>',
+            parse_mode='HTML',
+            reply_markup = await kb.main_keyboard(user_id=callback.from_user.id,session=session)
+        )
+        await state.clear()
+        return
+
     await state.update_data(bet_amount=bet_amount)
-    await callback.message.edit_text(f"Вы выбрали ставку: {bet_amount} UC. Ожидайте соперника...", reply_markup=None)
-    
+    await callback.message.edit_text(
+        f"Вы выбрали ставку: {bet_amount} UC. Ожидайте соперника...", 
+        reply_markup=None
+    )
+
     opponent = await rq.find_opponent(callback.from_user.id, bet_amount)
     if opponent:
         await state.set_state(state.DiceGame.bet_amount)
         await play_dice(callback.from_user.id, opponent, bet_amount, state)
     else:
-        await callback.message.edit_text(f"Соперника с такой же ставкой пока нет. Подождите...", reply_markup=None)
+        await callback.message.edit_text(
+            f"Соперника с такой же ставкой пока нет. Подождите...", 
+            reply_markup=None
+        )
         await asyncio.sleep(5)
         await process_bet(callback, state)
 

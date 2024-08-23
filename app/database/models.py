@@ -63,9 +63,12 @@ class User(Base):
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
     in_dice_game: Mapped[bool] = mapped_column(Boolean, default=False)
-    achievements: Mapped[list["Achievements"]] = relationship(
-        "Achievements", back_populates="user"
-    )
+    achievements: Mapped[list["Achievements"]] = relationship("Achievements", back_populates="user")
+
+    lvl: Mapped[int] = mapped_column(Integer, default=0)
+
+    def __init__(self):
+        self.achievements = []
 
 
 class Achievements(Base):

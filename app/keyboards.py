@@ -123,7 +123,7 @@ def bet():
 def back_to_profile_kb():
     return InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='`🔙 Обратно`', callback_data=f'back_to_profile')]
+        [InlineKeyboardButton(text='🔙 Обратно', callback_data=f'back_to_profile')]
     ]
 )
 
@@ -169,9 +169,11 @@ async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMar
             keyboard=[
                 [KeyboardButton(text="🔔 Задания"), KeyboardButton(text="🐵 Профиль")],
                 [KeyboardButton(text="💸 Вывод UC"), KeyboardButton(text="🏆 ТОП")],
+                [KeyboardButton(text="🎲Мини-игры")],
                 [KeyboardButton(text="❓ Ответы на вопросы")]
             ],
-            resize_keyboard=True
+            resize_keyboard=True,
+            one_time_keyboard=True
         )
         return keyboard
     else:
@@ -180,6 +182,7 @@ async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMar
                 [KeyboardButton(text="✅ Выполнить обязательные задания")],
                 [KeyboardButton(text="❓ Ответы на вопросы")]
             ],
-            resize_keyboard=True
+            resize_keyboard=True,
+            one_time_keyboard=True
         )
         return keyboard

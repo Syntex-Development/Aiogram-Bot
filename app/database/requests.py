@@ -31,6 +31,11 @@ async def set_user(message: Message):
 async def user(tg_id):
     async with async_session() as session:
         return await session.scalar(select(User).where(User.tg_id == tg_id))    
+    
+async def get_user(tg_id: int, session: AsyncSession):
+    async with async_session() as session:
+        user = await session.execute(select(User).filter_by(tg_id=tg_id))
+        return user.scalar_one_or_none()
 
 
 async def set_balance(tg_id, balance):
@@ -121,7 +126,7 @@ async def set_rank(tg_id, ammount):
 
 #Profile
         
-async def get_referral_count_by_tg_id(tg_id: int):
+async def get_referral_count_by_tg_id(tg_id: int, session: AsyncSession):
     async with async_session() as session:
         result = await session.execute(
             select(func.count(User.tg_id)).where(User.referrer_id == tg_id)
@@ -158,8 +163,15 @@ async def get_task_by_id(task_id):
 #Top users
 async def get_top_users(limit: int):
     async with async_session() as session:
-        top_users = session.query(User).order_by(User.refferals_count.desc()).limit(limit).all() 
-        return top_users 
+        result = await session.execute(
+            select(User)
+            .outerjoin(User.referrals)  # Объединяем с таблицей рефералов
+            .group_by(User.id)  # Группируем по пользователям
+            .order_by(func.count(User.referrals).desc())  # Считаем количество рефералов и сортируем
+            .limit(limit)
+        )
+        top_users = result.scalars().all()  # Получаем только пользователей
+        return top_users
 
 async def get_user_top_position(user_id: int):
     async with async_session() as session:
@@ -188,7 +200,7 @@ async def show_user_in_top(user_id: int):
 
 
 #Withdrawal
-async def get_stat_withdrawal():
+async def get_stat_withdrawal(session: AsyncSession):
     async with async_session() as session:
         stat = await session.execute(select(Withdrawal))
         return stat.scalar_one_or_none()
