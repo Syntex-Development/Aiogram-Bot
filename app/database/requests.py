@@ -263,4 +263,20 @@ async def add_achievement(tg_id: int, achievement_name: str):
 #config
 async def get_channels(channels_id: int, session: AsyncSession):
     result = await session.scalars(select(BaseChannels).filter(BaseChannels.channel_id == channels_id))
-    return result
+    return result.all()
+
+
+async def set_access(tg_id, session: AsyncSession):
+    async with async_session() as session:
+        user = await session.execute(
+            select(User).where(User.tg_id == tg_id)
+        )
+        user = user.scalar_one_or_none()
+
+        if user:
+            await session.execute(
+                update(User)
+                .where(User.tg_id == tg_id)
+                .values(initial_task_completed=True)
+            )
+            await session.commit()

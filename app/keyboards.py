@@ -147,8 +147,12 @@ def create_event_task(name, url):
     
     
 async def create_required_tasks_keyboard(session: AsyncSession):
-    channels = await rq.get_channels(channels_id='-1002228388262',session=session)
-    channel_buttons = [[InlineKeyboardButton(text=channel['name'], url=channel['url'])] for channel in channels]
+    channels = await rq.get_channels(channels_id=-1002228388262, session=session)
+    
+    if not channels:
+        return InlineKeyboardMarkup()
+
+    channel_buttons = [[InlineKeyboardButton(text=channel.name, url=channel.url)] for channel in channels]
     check_button = [InlineKeyboardButton(text="✅ Проверить", callback_data="check_required_tasks")]
 
     buttons = channel_buttons + [check_button]
@@ -169,6 +173,7 @@ async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMar
             ],
             resize_keyboard=True
         )
+        return keyboard
     else:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
@@ -177,5 +182,4 @@ async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMar
             ],
             resize_keyboard=True
         )
-
-    return keyboard
+        return keyboard

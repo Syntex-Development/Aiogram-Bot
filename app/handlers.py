@@ -69,7 +69,7 @@ async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
                 await message.answer(
                     text=("👋 Добро пожаловать! Вы уже выполнили обязательные задания. "
                           "Вы можете перейти к другим функциям бота."),
-                    reply_markup=await kb.menu_kb()
+                    reply_markup=await kb.main_keyboard(message.from_user.id, session)
                 )
 
     except Exception as e:
@@ -79,7 +79,27 @@ async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
 
 
 # Callback check_subscription (кнопки проверить подписку)
+@router.callback_query(F.data == 'check_required_tasks')
+async def check_subs_chnls(callback: CallbackQuery, session: AsyncSession):
+    user = await rq.user(callback.from_user.id)
+    channels = await rq.get_channels(channels_id=-1002228388262, session=session)
+    channel_ids = [channel.channel_id for channel in channels]
+
+    is_subscribed = True
+
+    for channel in channel_ids:
+        status = await tools.check_channel_sub(callback.from_user.id, channel)
+        if not status:
+            is_subscribed = False
+            break 
+
+    if is_subscribed:
+        await callback.message.edit_text("✅ Вы подписаны на все каналы!",show_alert=True)
+        await rq.set_access(callback.from_user.id, session)
         
+        await callback.message.answer('Добро пожаловать в бота!', reply_markup=await kb.main_keyboard(callback.from_user.id, session))
+    else:
+        await callback.message.edit_text("❌ Вы не подписаны на один или несколько каналов.", show_alert=True)
 
 @router.callback_query(F.data == 'сlose__')
 async def panel(callback : CallbackQuery, state: FSMContext):
@@ -469,7 +489,7 @@ async def check_handler(callback: CallbackQuery):
                     await callback.message.answer(achievement_message, reply_markup=kb.back_to_profile_kb())
 
             except Exception as e:
-                logging.error(e)
+                Logger.error(e)
         else:
             await callback.message.edit_text("❌ Вы не подписаны на канал!", reply_markup=kb.profile_kb())
 
