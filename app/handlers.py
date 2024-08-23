@@ -41,32 +41,44 @@ router.message.outer_middleware(TestMiddleware2())
 async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
     user_id = message.from_user.id
     try:
-        referrer_id = message.text.split()[1] if len(message.text.split()) > 1 else None
-        user = await rq.filter_user_id(user_id, session)
+        referrer_id = None
+        if len(message.text.split()) > 1:
+            referrer_id = message.text.split()[1]
+            if referrer_id.isdigit():
+                referrer_id = int(referrer_id)
+            else:
+                await message.answer("Неверный ID реферала. Попробуйте снова.")
+                return 
+
+        user = await rq.user(user_id)
         if not user:
             user = await rq.set_user(message)
-            if referrer_id and referrer_id.isdigit():
-                referrer_id = int(referrer_id)
-                referrer = await rq.filter_user_id(referrer_id, session)
-                if referrer:
-                    await rq.update_user(session, user_id, referrer_id=referrer_id)
 
-        if user and not user.initial_task_completed:
-            await message.answer(
-                text="👋 Добро пожаловать! Выполните обязательные задания и получите уже первую награду в 2 UC!",
-                reply_markup=await kb.check_user_subscription_and_generate_keyboard(user_id, session, message)
-            )
-        elif user:
-            await message.answer(
-                text=("👋 Добро пожаловать! Вы уже выполнили обязательные задания. "
-                      "Вы можете перейти к другим функциям бота."),
-                reply_markup=await kb.menu_kb(user_id, session)
-            )
+        if referrer_id:
+            referrer = await rq.user(referrer_id)
+            if referrer:
+                await rq.update_user(session, user_id, referrer_id=referrer_id)
+
+        if user:
+            if not user.initial_task_completed:
+                await message.answer(
+                    text="👋 Добро пожаловать! Выполните обязательные задания и получите уже первую награду в 2 UC!",
+                    reply_markup=await kb.create_required_tasks_keyboard(session)
+                )
+            else:
+                await message.answer(
+                    text=("👋 Добро пожаловать! Вы уже выполнили обязательные задания. "
+                          "Вы можете перейти к другим функциям бота."),
+                    reply_markup=await kb.menu_kb()
+                )
 
     except Exception as e:
         logger.error(f"Error command /start: {e}")
     except TelegramNotFound:
         logger.error(f"User {user_id} not found, unable to send /start message.")
+
+
+# Callback check_subscription (кнопки проверить подписку)
         
 
 @router.callback_query(F.data == 'сlose__')

@@ -264,6 +264,3 @@ async def add_achievement(tg_id: int, achievement_name: str):
 async def get_channels(channels_id: int, session: AsyncSession):
     result = await session.scalars(select(BaseChannels).filter(BaseChannels.channel_id == channels_id))
     return result
-
-async def filter_user_id(user_id: int, session: AsyncSession):
-    result = await session.scalars(select(User).filter(User.tg_id == user_id))

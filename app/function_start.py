@@ -12,7 +12,7 @@ from sqlalchemy import func
 
 from config import settings
 
-from app.database.requests import set_user, user_filters_referrer_id, filter_user_id, get_channels
+from app.database.requests import set_user, user_filters_referrer_id, user, get_channels
 
 import re
 
@@ -45,7 +45,7 @@ async def check_channel_subscription(user_id: int, channel_username: str) -> Inl
     
 async def notify_unsubscribed_users(message: Message, session: AsyncSession):
     user_id = message.from_user.id
-    users = await filter_user_id(user_id=user_id, session=session)
+    users = await user(user_id=user_id)
 
     for user in users:
         user_id = user.tg_id
@@ -70,7 +70,7 @@ def required_tasks_completed(func):
     @wraps(func)
     async def wrapper(message: Message, state: FSMContext = None, *args, **kwargs):
         user_id = message.from_user.id
-        user = await filter_user_id(user_id=user_id)
+        user = await user(user_id=user_id)
 
         if user is None:
             await message.answer("❗️ Пользователь не найден в системе.")

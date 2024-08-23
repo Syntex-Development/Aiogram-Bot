@@ -27,7 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import BaseChannels
-from app.database.requests import filter_user_id, get_channels
+from app.database.requests import user, get_channels
 
 
 
@@ -146,32 +146,25 @@ def create_event_task(name, url):
 )
     
     
-async def check_user_subscription_and_generate_keyboard(user_id: int, session: AsyncSession, message: Message) -> InlineKeyboardMarkup | bool:
-    result = await session.execute(select(BaseChannels))
-    channels = result.scalars().all()
-    keyboard = InlineKeyboardBuilder()
-    all_subscribed = True
-    for channel in channels:
-        member = await message.bot.get_chat_member(chat_id=channel.channel_id, user_id=user_id)
+async def create_required_tasks_keyboard(session: AsyncSession):
+    channels = await rq.get_channels(channels_id='-1002228388262',session=session)
+    channel_buttons = [[InlineKeyboardButton(text=channel['name'], url=channel['url'])] for channel in channels]
+    check_button = [InlineKeyboardButton(text="✅ Проверить", callback_data="check_required_tasks")]
 
-        if member.status == ChatMemberStatus.LEFT or member.status == ChatMemberStatus.KICKED:
-            all_subscribed = False
-            button = InlineKeyboardButton(text=channel.name, url=channel.url)
-            keyboard.add(button)
-        keyboard.add(InlineKeyboardButton(text='Проверить', callback_data='check_subscription'))
-    if all_subscribed:
-        return True
+    buttons = channel_buttons + [check_button]
 
-    return keyboard.as_markup()
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    return keyboard
 
 async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMarkup:
-    user = await rq.filter_user_id(user_id, session)
+    user = await rq.user(user_id)
 
     if user and user.initial_task_completed:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="📋 Задания"), KeyboardButton(text="👨 Профиль")],
-                [KeyboardButton(text="💸 Вывести"), KeyboardButton(text="🏆 ТОП")],
+                [KeyboardButton(text="🔔 Задания"), KeyboardButton(text="🐵 Профиль")],
+                [KeyboardButton(text="💸 Вывод UC"), KeyboardButton(text="🏆 ТОП")],
                 [KeyboardButton(text="❓ Ответы на вопросы")]
             ],
             resize_keyboard=True
