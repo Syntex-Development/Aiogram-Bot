@@ -50,7 +50,7 @@ class User(Base):
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     username: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(255))
-    balance: Mapped[int] = mapped_column(BigInteger, default=0)
+    balance: Mapped[int] = mapped_column(BigInteger, default=10)
     referral_earnings: Mapped[float] = mapped_column(Float, default=0)
     referrer_id = Column(Integer, ForeignKey('users.id'))
     rank_id: Mapped[int] = mapped_column(Integer, default=0)
@@ -67,8 +67,6 @@ class User(Base):
 
     lvl: Mapped[int] = mapped_column(Integer, default=0)
 
-    def __init__(self):
-        self.achievements = []
 
 
 class Achievements(Base):

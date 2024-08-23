@@ -50,14 +50,16 @@ async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
                 await message.answer("Неверный ID реферала. Попробуйте снова.")
                 return 
 
-        user = await rq.user(user_id)
-        if not user:
-            user = await rq.set_user(message)
+        # Correctly using get_user, passing tg_id and session
+        user = await rq.get_user(tg_id=user_id, session=session)
+        if user == None:
+            await rq.set_user(message)
 
         if referrer_id:
-            referrer = await rq.user(referrer_id)
+            referrer = await rq.get_user(tg_id=referrer_id, session=session)  
             if referrer:
-                await rq.update_user(session, user_id, referrer_id=referrer_id)
+                # await rq.update_user(session, user_id, referrer_id=referrer_id) 
+                pass
 
         if user:
             if not user.initial_task_completed:
@@ -347,7 +349,7 @@ async def profile(message: Message, state: FSMContext, session: AsyncSession):
     balance = user.balance
     completed_tasks_count = user.task_completed
     lvl = user.lvl
-    taked_achievements_count = len(user.achievements)
+    taked_achievements_count = await rq.get_achievements_count(tg_id, session)
     tg_bot_link = 'https://t.me/koshmrUCbot'
     refferals_count = await rq.get_referral_count_by_tg_id(tg_id, session)  # И здесь
     earned_by_refferals = user.referral_earnings
@@ -377,13 +379,13 @@ async def profile(message: Message, state: FSMContext, session: AsyncSession):
     🪙 На сумму: {withdrawal_sum} UC
     """
 
-    await message.edit_text(text=info_message, reply_markup=kb.profile_kb())
+    await message.answer(text=info_message, reply_markup= kb.back_to_profile_kb())
 
 
 
 @router.callback_query(F.data == 'back_to_profile')
 async def back_to_profile(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    await callback.message.answer('Вы были перемещены в меню.', reply_markup=await kb.main_keyboard(callback.from_user.id, session))
+    await callback.message.answer('Вы были перемещены в меню.', reply_markup= await kb.main_keyboard(callback.from_user.id, session))
 
 
 @router.callback_query(F.text == '🔔 Задания')
@@ -663,7 +665,6 @@ async def dice(callback: CallbackQuery):
 
 @router.callback_query(lambda c: c.data in ['5', '30', '60'])
 async def process_bet(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    await callback.message.delete()
     bet_amount = int(callback.data)
     user = await rq.user(callback.from_user.id)
 
@@ -684,26 +685,33 @@ async def process_bet(callback: CallbackQuery, state: FSMContext, session: Async
 
     opponent = await rq.find_opponent(callback.from_user.id, bet_amount)
     if opponent:
-        await state.set_state(state.DiceGame.bet_amount)
-        await play_dice(callback.from_user.id, opponent, bet_amount, state)
+        await state.set_state(states.DiceGame.bet_amount)
+        await play_dice(callback.from_user.id, opponent, bet_amount, state, session)
     else:
         await callback.message.edit_text(
             f"Соперника с такой же ставкой пока нет. Подождите...", 
             reply_markup=None
         )
         await asyncio.sleep(5)
-        await process_bet(callback, state)
+        await process_bet(callback, state, session)
 
 
-async def play_dice(player1_id: int, player2_id: int, bet_amount: int, state: FSMContext):
+async def play_dice(player1_id: int, player2_id: int, bet_amount: int, state: FSMContext, session: AsyncSession):
     player1_roll = randint(1, 6)
     player2_roll = randint(1, 6)
+
+    player1 = await rq.get_user(player1_id, session)
+    player2 = await rq.get_user(player2_id, session)
+
+    if not player1 or not player2:
+        return
+
     if player1_roll > player2_roll:
         winner_id = player1_id
-        winner_name = (await rq.get_user_by_id(player1_id)).username
+        winner_name = player1.username
     elif player2_roll > player1_roll:
         winner_id = player2_id
-        winner_name = (await rq.get_user_by_id(player2_id)).username
+        winner_name = player2.username
     else:
         winner_id = None
         winner_name = None
@@ -717,21 +725,21 @@ async def play_dice(player1_id: int, player2_id: int, bet_amount: int, state: FS
 
     if winner_id:
         await state.finish()
-        await (await rq.get_user_by_id(player1_id)).message.edit_text(
+        await (await rq.get_user(player1_id)).message.edit_text(
             f"Результат игры: Вы - {player1_roll}, Соперник - {player2_roll}\nПобедитель: {winner_name}",
             reply_markup=kb.profile_kb()
         )
-        await (await rq.get_user_by_id(player2_id)).message.edit_text(
+        await (await rq.get_user(player2_id)).message.edit_text(
             f"Результат игры: Вы - {player2_roll}, Соперник - {player1_roll}\nПобедитель: {winner_name}",
             reply_markup=kb.profile_kb()
         )
     else:
         await state.finish()
-        await (await rq.get_user_by_id(player1_id)).message.edit_text(
+        await (await rq.get_user(player1_id, session)).message.edit_text(
             f"Результат игры: Вы - {player1_roll}, Соперник - {player2_roll}\nНичья!",
             reply_markup=kb.profile_kb()
         )
-        await (await rq.get_user_by_id(player2_id)).message.edit_text(
+        await (await rq.get_user(player2_id, session)).message.edit_text(
             f"Результат игры: Вы - {player2_roll}, Соперник - {player1_roll}\nНичья!",
             reply_markup=kb.profile_kb()
         )

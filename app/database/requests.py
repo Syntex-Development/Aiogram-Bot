@@ -2,7 +2,7 @@ from aiogram.types import Message
 from app.database.models import async_session
 from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal, Achievements, BaseChannels
 from sqlalchemy import select, update, delete, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +26,7 @@ async def set_user(message: Message):
                 new_user.referrer_id = referrer_id
             session.add(new_user)
             await session.commit()
-        return user
+            return user
 
 async def user(tg_id):
     async with async_session() as session:
@@ -38,16 +38,15 @@ async def get_user(tg_id: int, session: AsyncSession):
         return user.scalar_one_or_none()
 
 
-async def set_balance(tg_id, balance):
+async def set_balance(tg_id, balance, ):
     async with async_session() as session:
         await session.execute(update(User).where(User.tg_id == tg_id).values(balance=balance))
         await session.commit()
 
-async def add_balance(tg_id, amount):
-    async with async_session() as session:
-        user = session.query(User).filter(User.tg_id == tg_id).first()
-        user.balance += amount
-        await session.commit()
+async def add_balance(tg_id, amount, session: AsyncSession):
+    user = session.query(User).filter(User.tg_id == tg_id).first()
+    user.balance += amount
+    await session.commit()
 
 async def balance(tg_id):
     async with async_session() as session:
@@ -69,6 +68,26 @@ async def admins(tg_id):
     async with async_session() as session:
         return await session.scalars(select(Admin.tg_id))
 
+async def add_user(tg_id: int, session: AsyncSession):
+    """
+    Добавляет нового пользователя в базу данных, если его там нет.
+
+    Args:
+        tg_id (int): Telegram ID пользователя.
+        session (AsyncSession): Сессия SQLAlchemy.
+
+    Returns:
+        User: Объект пользователя, добавленный в базу данных.
+    """
+
+    existing_user = await session.one_or_none(select(User).filter(User.tg_id == tg_id))
+    if existing_user:
+        return existing_user  # Пользователь уже существует, возвращаем его
+
+    new_user = User(tg_id=tg_id)
+    session.add(new_user)
+    await session.commit()
+    return new_user
 
 
 
@@ -127,11 +146,10 @@ async def set_rank(tg_id, ammount):
 #Profile
         
 async def get_referral_count_by_tg_id(tg_id: int, session: AsyncSession):
-    async with async_session() as session:
-        result = await session.execute(
-            select(func.count(User.tg_id)).where(User.referrer_id == tg_id)
-        )
-        return result.scalar()
+    result = await session.execute(
+        select(func.count(User.tg_id)).where(User.referrer_id == tg_id)
+    )
+    return result.scalar()
 
 #Tasks
 async def get_tasks(tg_id, message):
@@ -201,9 +219,8 @@ async def show_user_in_top(user_id: int):
 
 #Withdrawal
 async def get_stat_withdrawal(session: AsyncSession):
-    async with async_session() as session:
-        stat = await session.execute(select(Withdrawal))
-        return stat.scalar_one_or_none()
+    stat = await session.execute(select(Withdrawal))
+    return stat.scalar_one_or_none()
         
 
 async def get_codes_count():
@@ -244,6 +261,7 @@ async def find_opponent(tg_id: int, bet_amount: int):
                 User.in_dice_game == False
             )
         )
+        return opponent
         
 #Achievements
 async def add_achievement(tg_id: int, achievement_name: str):
@@ -292,3 +310,17 @@ async def set_access(tg_id, session: AsyncSession):
                 .values(initial_task_completed=True)
             )
             await session.commit()
+
+
+async def get_achievements_count(tg_id, session: AsyncSession):
+    # Выполнение асинхронного запроса
+    result = await session.execute(
+        select(User).options(selectinload(User.achievements)).filter(User.tg_id == tg_id)
+    )
+    user = result.scalars().first()  # Получаем первый результат
+
+    if user:
+        taked_achievements_count = len(user.achievements)
+        return taked_achievements_count
+
+    return 0  # Возвращаем 0, если пользователь не найден
