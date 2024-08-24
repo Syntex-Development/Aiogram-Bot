@@ -164,7 +164,7 @@ async def create_required_tasks_keyboard(session: AsyncSession):
     return keyboard
 
 async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMarkup:
-    user = await rq.user(user_id)
+    user = await rq.user(user_id, session)
 
     if user and user.initial_task_completed:
         keyboard = ReplyKeyboardMarkup(

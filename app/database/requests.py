@@ -28,9 +28,8 @@ async def set_user(message: Message):
             await session.commit()
             return user
 
-async def user(tg_id):
-    async with async_session() as session:
-        return await session.scalar(select(User).where(User.tg_id == tg_id))    
+async def user(tg_id, session: AsyncSession):
+    return await session.scalar(select(User).where(User.tg_id == tg_id))    
     
 async def get_user(tg_id: int, session: AsyncSession):
     async with async_session() as session:
@@ -269,16 +268,31 @@ async def update_withdrawal_stat():
 
 
 #Mini-games
-async def find_opponent(tg_id: int, bet_amount: int):
-    async with async_session() as session:
-        opponent = await session.execute(
-            select(User).where(
-                User.tg_id != tg_id, 
-                User.balance >= bet_amount, 
-                User.wait_dice_game == True
-            )
-        )
-        return opponent
+async def find_opponent(tg_id: int, bet_amount: int, session: AsyncSession):
+    opponent_query = select(User).where(
+        User.tg_id != tg_id,
+        User.balance >= bet_amount,
+        User.wait_dice_game == True
+    ).order_by(User.id).limit(1)
+
+    opponent = await session.execute(opponent_query)
+    result = opponent.scalar_one_or_none()
+
+    if result:
+        result.wait_dice_game = False
+        await session.commit()
+
+    return result
+    
+async def update_user_waiting_status(tg_id: int, waiting: bool, session: AsyncSession):
+    user = await session.execute(
+        select(User).where(User.tg_id == tg_id)
+    )
+    user = user.scalar_one_or_none()
+
+    if user:
+        user.wait_dice_game = waiting
+        await session.commit()
         
 #Achievements
 async def add_achievement(tg_id: int, achievement_name: str):
