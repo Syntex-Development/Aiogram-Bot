@@ -50,7 +50,7 @@ class User(Base):
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     username: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(255))
-    balance: Mapped[int] = mapped_column(BigInteger, default=10)
+    balance: Mapped[float] = mapped_column(Float, default=10)
     referral_earnings: Mapped[float] = mapped_column(Float, default=0)
     referrer_id = Column(Integer, ForeignKey('users.id'))
     rank_id: Mapped[int] = mapped_column(Integer, default=0)
@@ -62,10 +62,14 @@ class User(Base):
     issued_codes: Mapped[list['IssuedCode']] = relationship('IssuedCode', back_populates='user')
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
-    in_dice_game: Mapped[bool] = mapped_column(Boolean, default=False)
+    wait_dice_game: Mapped[bool] = mapped_column(Boolean, default=False)
     achievements: Mapped[list["Achievements"]] = relationship("Achievements", back_populates="user")
 
     lvl: Mapped[int] = mapped_column(Integer, default=0)
+    
+    @property
+    def referrals_count(self):
+        return len(self.referrals)
 
 
 

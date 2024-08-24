@@ -105,7 +105,8 @@ def menu_kb():
 #mini-games
 def games():
     return InlineKeyboardMarkup(row_width=1, inline_keyboard=[
-        [InlineKeyboardButton(text="Кости", callback_data="dice")]
+        [InlineKeyboardButton(text="Кости", callback_data="dice")],
+        [InlineKeyboardButton(text='🔙 Обратно', callback_data=f'back_to_profile')]
     ])
 
 #5,30,60
@@ -114,7 +115,8 @@ def bet():
     return InlineKeyboardMarkup(row_width=1, inline_keyboard=[
         [InlineKeyboardButton(text='5 UC', callback_data='5')],
         [InlineKeyboardButton(text='30 UC', callback_data='30')],
-        [InlineKeyboardButton(text='60 UC', callback_data='60')]
+        [InlineKeyboardButton(text='60 UC', callback_data='60')],
+        [InlineKeyboardButton(text='🔙 Обратно', callback_data=f'back_to_profile')]
     ])
 
 
@@ -186,3 +188,12 @@ async def main_keyboard(user_id: int, session: AsyncSession) -> ReplyKeyboardMar
             one_time_keyboard=True
         )
         return keyboard
+    
+async def refresh_top_kb():
+    keyboard = InlineKeyboardMarkup(
+        row_width=1,
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Обновить ТОП", callback_data="refresh_top")]
+        ]
+    )
+    return keyboard

@@ -2,7 +2,7 @@ from aiogram.types import Message
 from app.database.models import async_session
 from app.database.models import User, Admin, SecretCode, Event, TaskCompletion, Task, Withdrawal, Achievements, BaseChannels
 from sqlalchemy import select, update, delete, func
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import selectinload, joinedload, aliased, selectinload
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -69,20 +69,9 @@ async def admins(tg_id):
         return await session.scalars(select(Admin.tg_id))
 
 async def add_user(tg_id: int, session: AsyncSession):
-    """
-    Добавляет нового пользователя в базу данных, если его там нет.
-
-    Args:
-        tg_id (int): Telegram ID пользователя.
-        session (AsyncSession): Сессия SQLAlchemy.
-
-    Returns:
-        User: Объект пользователя, добавленный в базу данных.
-    """
-
     existing_user = await session.one_or_none(select(User).filter(User.tg_id == tg_id))
     if existing_user:
-        return existing_user  # Пользователь уже существует, возвращаем его
+        return existing_user
 
     new_user = User(tg_id=tg_id)
     session.add(new_user)
@@ -152,24 +141,27 @@ async def get_referral_count_by_tg_id(tg_id: int, session: AsyncSession):
     return result.scalar()
 
 #Tasks
-async def get_tasks(tg_id, message):
-    async with async_session() as session:
-        user = session.query(User).filter(User.tg_id == tg_id).first()
-        tasks = session.query(Task).filter(Task.is_active == True).all()
+async def get_tasks(tg_id, message, session: AsyncSession):
+    user_result = await session.execute(select(User).filter(User.tg_id == tg_id))
+    user = user_result.scalars().first()
 
-        available_tasks = []
-        for task in tasks:
-            completion = session.query(TaskCompletion).filter(
-                TaskCompletion.user_id == user.id,
-                TaskCompletion.task_id == task.id
-            ).first()
+    tasks_result = await session.execute(select(Task).filter(Task.is_active == True))
+    tasks = tasks_result.scalars().all()
 
-            if not completion:
-                available_tasks.append(task)
+    available_tasks = []
+    for task in tasks:
+        completion_result = await session.execute(select(TaskCompletion).filter(
+            TaskCompletion.user_id == user.id,
+            TaskCompletion.task_id == task.id
+        ))
+        completion = completion_result.scalars().first()
 
-        if not available_tasks:
-            return False
-        return available_tasks
+        if not completion:
+            available_tasks.append(task)
+
+    if not available_tasks:
+        return False
+    return available_tasks
 
 
 async def get_task_by_id(task_id):
@@ -179,42 +171,67 @@ async def get_task_by_id(task_id):
     
 
 #Top users
-async def get_top_users(limit: int):
-    async with async_session() as session:
-        result = await session.execute(
-            select(User)
-            .outerjoin(User.referrals)  # Объединяем с таблицей рефералов
-            .group_by(User.id)  # Группируем по пользователям
-            .order_by(func.count(User.referrals).desc())  # Считаем количество рефералов и сортируем
-            .limit(limit)
-        )
-        top_users = result.scalars().all()  # Получаем только пользователей
-        return top_users
+async def get_top_users(limit: int, session: AsyncSession):
+    Referral = aliased(User)
 
-async def get_user_top_position(user_id: int):
-    async with async_session() as session:
-        user = session.query(User).filter(User.tg_id == user_id).first()
-        if user and user.is_hidden_in_top:
-            return None
-        top_users = session.query(User).order_by(User.refferals_count.desc()).all()
-        position = 0
-        for i, user_in_top in enumerate(top_users):
-            if user_in_top.tg_id == user_id:
-                position = i + 1
-                break
-        return position
+    result = await session.execute(
+        select(User)
+        .outerjoin(Referral, Referral.referrer_id == User.id)
+        .group_by(User.id)
+        .order_by(func.count(Referral.id).desc())
+        .limit(limit)
+    )
 
-async def hide_user_in_top(user_id: int):
-    async with async_session() as session:
-        user = session.query(User).filter(User.tg_id == user_id).first()
+    top_users = result.scalars().all()
+    return top_users
+
+async def get_user_top_position(user_id: int, session: AsyncSession):
+    user_alias = aliased(User)
+
+    result = await session.execute(
+        select(User).filter(User.tg_id == user_id)
+    )
+    user = result.scalars().first()
+
+    if user and user.is_hidden:
+        return None
+
+    subquery = (
+        select(user_alias.id, func.count().label("referrals_count"))
+        .join(user_alias.referrals)
+        .group_by(user_alias.id)
+        .subquery()
+    )
+
+    result = await session.execute(
+        select(User, subquery.c.referrals_count)
+        .outerjoin(subquery, User.id == subquery.c.id)
+        .order_by(subquery.c.referrals_count.desc())
+    )
+    
+    top_users = result.all()
+
+    position = 0
+    for i, (user_in_top, _) in enumerate(top_users):
+        if user_in_top.tg_id == user_id:
+            position = i + 1
+            break
+            
+    return position
+
+async def hide_user_in_top(user_id: int, session: AsyncSession):
+    stmt = select(User).where(User.tg_id == user_id)
+    result = await session.execute(stmt)
+    user = result.scalars().first()
+
+    if user:
         user.is_hidden_in_top = True
         await session.commit()
 
-async def show_user_in_top(user_id: int):
-    async with async_session() as session:
-        user = session.query(User).filter(User.tg_id == user_id).first()
-        user.is_hidden_in_top = False
-        await session.commit()
+async def show_user_in_top(user_id: int, session: AsyncSession):
+    user_ = await user(user_id)
+    user_.is_hidden_in_top = False
+    await session.commit()
 
 
 #Withdrawal
@@ -258,7 +275,7 @@ async def find_opponent(tg_id: int, bet_amount: int):
             select(User).where(
                 User.tg_id != tg_id, 
                 User.balance >= bet_amount, 
-                User.in_dice_game == False
+                User.wait_dice_game == True
             )
         )
         return opponent
@@ -313,14 +330,13 @@ async def set_access(tg_id, session: AsyncSession):
 
 
 async def get_achievements_count(tg_id, session: AsyncSession):
-    # Выполнение асинхронного запроса
     result = await session.execute(
         select(User).options(selectinload(User.achievements)).filter(User.tg_id == tg_id)
     )
-    user = result.scalars().first()  # Получаем первый результат
+    user = result.scalars().first()
 
     if user:
         taked_achievements_count = len(user.achievements)
         return taked_achievements_count
 
-    return 0  # Возвращаем 0, если пользователь не найден
+    return 0
