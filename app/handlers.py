@@ -670,119 +670,54 @@ async def dice(callback: CallbackQuery):
 @router.callback_query(lambda c: c.data in ['5', '30', '60'])
 async def process_bet(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     try:
-        bet_amount = int(callback.data)
-        user = await rq.user(callback.from_user.id, session)
+        async with session:
+            bet_amount = int(callback.data)
+            user = await rq.user(callback.from_user.id, session)
 
-        if user.balance < bet_amount:
-            await callback.message.answer(
-                f'На вашем счету недостаточно средств!\nВаш баланс: <code>{user.balance} UC</code>',
-                parse_mode='HTML',
-                reply_markup=await kb.main_keyboard(user_id=callback.from_user.id, session=session)
-            )
-            await state.clear()
-            return
-
-        await callback.answer()
-        await rq.update_user_waiting_status(callback.from_user.id, True, session)
-        await state.update_data(bet_amount=bet_amount)
-
-        # Инициализация текста сообщения и анимации
-        search_message = await callback.message.edit_text(
-            "Вы выбрали ставку: {bet_amount} UC. Ищем соперника...\n[{}] 0%",
-            parse_mode='HTML'
-        )
-
-        timeout = 60
-        check_interval = 3
-        progress_length = 20  # Длина полосы загрузки
-        opponent_found = asyncio.Event()
-
-        async def find_opponent_task():
-            nonlocal opponent_found
-            elapsed_time = 0
-            while not opponent_found.is_set() and elapsed_time < timeout:
-                opponent = await rq.find_opponent(callback.from_user.id, bet_amount, session)
-                if opponent:
-                    await state.set_state(states.DiceGame.bet_amount)
-                    await play_dice(callback.from_user.id, opponent.id, bet_amount, state, session, search_message)
-                    opponent_found.set()
-                    return
-                progress = int((elapsed_time / timeout) * progress_length)
-                progress_bar = "█" * progress + "░" * (progress_length - progress)
-                percentage = int((elapsed_time / timeout) * 100)
-                await search_message.edit_text(
-                    f"Вы выбрали ставку: {bet_amount} UC. Ищем соперника...\n[{progress_bar}] {percentage}%",
-                    parse_mode='HTML'
+            if user.balance < bet_amount:
+                await callback.message.answer(
+                    f'На вашем счету недостаточно средств!\nВаш баланс: <code>{user.balance} UC</code>',
+                    parse_mode='HTML',
+                    reply_markup=await kb.main_keyboard(user_id=callback.from_user.id, session=session)
                 )
-                await asyncio.sleep(check_interval)
-                elapsed_time += check_interval
+                await state.clear()
+                return
 
-        search_task = asyncio.create_task(find_opponent_task())
+            await state.update_data(bet_amount=bet_amount)
 
-        try:
-            await asyncio.wait_for(opponent_found.wait(), timeout)
-        except asyncio.TimeoutError:
-            await search_message.edit_text(
-                "Соперник не найден. Игра отменена.",
-                reply_markup=await kb.main_keyboard(user_id=callback.from_user.id, session=session, reply_markup=kb.back_to_profile_kb())
+            search_message = await callback.message.edit_text(
+                f"Вы выбрали ставку: {bet_amount} UC. Ищем соперника...",
+                parse_mode='HTML'
             )
-            await state.clear()
-            await rq.update_user_waiting_status(callback.from_user.id, False, session)
-        finally:
-            search_task.cancel()
+            await asyncio.sleep(3)
 
+            await search_message.delete()
+            game = await callback.message.answer('Игра найдена, подбрасываю кости...')
+
+            async def roll_dice():
+                player1_roll = randint(1, 6)
+                player2_roll = randint(1, 6)
+                return player1_roll, player2_roll
+
+            player1_roll, player2_roll = await roll_dice()
+
+            await game.delete()
+
+            if player1_roll > player2_roll:
+                user.balance += bet_amount
+                win_sum = user.balance
+                await rq.set_balance(callback.from_user.id, win_sum, session)
+                await callback.message.answer(
+                    f'<b>Вы победили!</b>\n\nВаш бросок: <b>{player1_roll}</b>\nБросок соперника: <b>{player2_roll}</b>\n\nБаланс: <code>{user.balance}</code>', reply_markup= kb.back_to_profile_kb())
+            
+            elif player1_roll < player2_roll:
+                user.balance -= bet_amount
+                win_sum = user.balance
+                await rq.set_balance(callback.from_user.id, win_sum, session)
+                await callback.message.answer(
+                    f'<b>Вы проиграли!</b>\n\nВаш бросок: <b>{player1_roll}</b>\nБросок соперника: <b>{player2_roll}</b>\n\nБаланс: <code>{user.balance}</code>', reply_markup= kb.back_to_profile_kb())
+        
     except Exception as e:
         print(e)
-        await callback.message.answer("Игра не была найдена. Поиск отменен.", reply_markup = kb.back_to_profile_kb())
+        await callback.message.answer('Произошла ошибка...', reply_markup= kb.back_to_profile_kb())
         await state.clear()
-        await rq.update_user_waiting_status(callback.from_user.id, False, session)
-        search_task.cancel()
-
-
-async def play_dice(player1_id: int, player2_id: int, bet_amount: int, state: FSMContext, session: AsyncSession, search_message):
-    try:
-        player1_roll = randint(1, 6)
-        player2_roll = randint(1, 6)
-
-        player1 = await rq.get_user(player1_id, session)
-        player2 = await rq.get_user(player2_id, session)
-
-        if not player1 or not player2:
-            return
-
-        if player1_roll > player2_roll:
-            winner_id = player1_id
-            winner_name = player1.username
-        elif player2_roll > player1_roll:
-            winner_id = player2_id
-            winner_name = player2.username
-        else:
-            winner_id = None
-            winner_name = None
-
-        if winner_id:
-            await rq.add_balance(winner_id, bet_amount)
-            await rq.add_balance(player1_id if winner_id == player2_id else player2_id, -bet_amount)
-        else:
-            await rq.add_balance(player1_id, -bet_amount)
-            await rq.add_balance(player2_id, -bet_amount)
-
-        player1.wait_dice_game = False
-        player2.wait_dice_game = False
-
-        if winner_id:
-            await state.clear()
-            await search_message.edit_text(
-                f"Результат игры: Вы - {player1_roll}, Соперник - {player2_roll}\nПобедитель: {winner_name}",
-                reply_markup=kb.profile_kb()
-            )
-        else:
-            await state.clear()
-            await search_message.edit_text(
-                f"Результат игры: Вы - {player1_roll}, Соперник - {player2_roll}\nНичья!",
-                reply_markup=kb.profile_kb()
-            )
-
-    except Exception as e:
-        print(e)
-        await search_message.edit_text("Произошла ошибка во время игры. Попробуйте еще раз.", reply_markup=kb.profile_kb())

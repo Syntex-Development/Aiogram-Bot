@@ -24,7 +24,7 @@ class TestMiddleware2(BaseMiddleware):
         return result
 
 class DataBaseSession(BaseMiddleware):
-    def __init__(self, session_pool: async_session):
+    def __init__(self, session_pool):
         self.session_pool = session_pool
 
     async def __call__(

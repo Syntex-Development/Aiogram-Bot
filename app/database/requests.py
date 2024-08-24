@@ -37,15 +37,30 @@ async def get_user(tg_id: int, session: AsyncSession):
         return user.scalar_one_or_none()
 
 
-async def set_balance(tg_id, balance, ):
+async def set_balance(tg_id, balance, session: AsyncSession ):
     async with async_session() as session:
         await session.execute(update(User).where(User.tg_id == tg_id).values(balance=balance))
         await session.commit()
 
 async def add_balance(tg_id, amount, session: AsyncSession):
-    user = session.query(User).filter(User.tg_id == tg_id).first()
-    user.balance += amount
-    await session.commit()
+    result = await session.execute(select(User).filter(User.tg_id == tg_id))
+    user = result.scalars().first()
+
+    if user:
+        user.balance += amount
+        await session.commit()
+    else:
+        raise ValueError("Пользователь не найден")
+    
+async def minus_balance(tg_id, amount, session: AsyncSession):
+    result = await session.execute(select(User).filter(User.tg_id == tg_id))
+    user = result.scalars().first()
+
+    if user:
+        user.balance - amount
+        await session.commit()
+    else:
+        raise ValueError("Пользователь не найден")
 
 async def balance(tg_id):
     async with async_session() as session:
