@@ -1,9 +1,11 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncAttrs
-from sqlalchemy import BigInteger, String, Boolean, ForeignKey, Float, DateTime, Integer, text, Column
+from sqlalchemy import BigInteger, String, Boolean, ForeignKey, Float, DateTime, Integer, text, Column, Enum
 from datetime import datetime
 from config import settings
 
+
+import enum
 
 
 
@@ -43,6 +45,11 @@ class SecretCode(Base):
     code: Mapped[str] = mapped_column(String(255), unique=True)
     is_used: Mapped[bool] = mapped_column(Boolean, default=False)
     
+
+class UserStatus(enum.Enum):
+    idle = "idle"
+    waiting_opponent = "waiting_opponent"
+    in_game = "in_game"
 class User(Base):
     __tablename__ = 'users'
     
@@ -50,7 +57,7 @@ class User(Base):
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True, nullable=False)
     username: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(255))
-    balance: Mapped[float] = mapped_column(Float, default=10)
+    balance: Mapped[float] = mapped_column(Float, default=0)
     referral_earnings: Mapped[float] = mapped_column(Float, default=0)
     referrer_id = Column(Integer, ForeignKey('users.id'))
     rank_id: Mapped[int] = mapped_column(Integer, default=0)
@@ -63,6 +70,8 @@ class User(Base):
     all_cashout: Mapped[float] = mapped_column(Float, default=0)
     referral_reward_collected: Mapped[bool] = mapped_column(Boolean, default=False)
     wait_dice_game: Mapped[bool] = mapped_column(Boolean, default=False)
+    status = Column(Enum(UserStatus), default=UserStatus.idle)
+    bet_amount: Mapped[int] = mapped_column(Integer, default=0)
     achievements: Mapped[list["Achievements"]] = relationship("Achievements", back_populates="user")
 
     lvl: Mapped[int] = mapped_column(Integer, default=0)
@@ -70,6 +79,11 @@ class User(Base):
     @property
     def referrals_count(self):
         return len(self.referrals)
+    
+    def __repr__(self):
+            return f"<User(tg_id={self.tg_id}, full_name={self.full_name}, status={self.status}, balance={self.balance})>"
+
+
 
 
 

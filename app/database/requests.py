@@ -94,6 +94,7 @@ async def add_user(tg_id: int, session: AsyncSession):
 
 
 
+
 async def set_secret_codes(codes): 
     uniques = []
     not_uniques = []
@@ -191,6 +192,7 @@ async def get_top_users(limit: int, session: AsyncSession):
     result = await session.execute(
         select(User)
         .outerjoin(Referral, Referral.referrer_id == User.id)
+        .filter(User.is_hidden == False) 
         .group_by(User.id)
         .order_by(func.count(Referral.id).desc())
         .limit(limit)
@@ -239,13 +241,28 @@ async def hide_user_in_top(user_id: int, session: AsyncSession):
     user = result.scalars().first()
 
     if user:
-        user.is_hidden_in_top = True
+        user.is_hidden = True
         await session.commit()
 
 async def show_user_in_top(user_id: int, session: AsyncSession):
-    user_ = await user(user_id)
-    user_.is_hidden_in_top = False
-    await session.commit()
+    stmt = select(User).where(User.tg_id == user_id)
+    result = await session.execute(stmt)
+    user = result.scalars().first()
+
+    if user:
+        user.is_hidden = False
+        await session.commit()
+
+async def is_user_hidden(user_id: int, session: AsyncSession) -> bool:
+
+    result = await session.execute(
+        select(User.is_hidden).where(User.id == user_id)
+    )
+    is_hidden = result.scalar()
+    if is_hidden == True:
+        return True
+    else:
+        return False
 
 
 #Withdrawal
@@ -254,10 +271,14 @@ async def get_stat_withdrawal(session: AsyncSession):
     return stat.scalar_one_or_none()
         
 
-async def get_codes_count():
-    async with async_session() as session:
-        #сделать получение кол-ва доступных кодов
-        pass
+async def get_codes_count(session: AsyncSession) -> int:
+    query = select(func.count()).filter(SecretCode.is_used == False)
+    
+    result = await session.execute(query)
+    
+    count = result.scalar()
+    
+    return count
 
 
 async def get_activation_code():
@@ -283,22 +304,32 @@ async def update_withdrawal_stat():
 
 
 #Mini-games
-async def find_opponent(tg_id: int, bet_amount: int, session: AsyncSession):
-    opponent_query = select(User).where(
+async def start_game(tg_id: int, wait_game: bool, bet_amount: int, session: AsyncSession):
+    update_query = (
+        update(User)
+        .where(User.tg_id == tg_id)
+        .values(wait_dice_game=wait_game, bet_amount=bet_amount)
+    )
+
+    await session.execute(update_query)
+    await session.commit()
+
+    select_query = select(User.tg_id).where(User.tg_id == tg_id)
+    result = await session.execute(select_query)
+    return result.scalar_one_or_none()
+
+
+async def find_opp(tg_id: int, bet_amount: int, session: AsyncSession):
+    opponent_query = select(User.tg_id).where(
+        User.wait_dice_game == True,
         User.tg_id != tg_id,
-        User.balance >= bet_amount,
-        User.wait_dice_game == True
-    ).order_by(User.id).limit(1)
+        User.bet_amount == bet_amount
+    ).limit(1)
 
     opponent = await session.execute(opponent_query)
     result = opponent.scalar_one_or_none()
-
-    if result:
-        result.wait_dice_game = False
-        await session.commit()
-
     return result
-    
+
 async def update_user_waiting_status(tg_id: int, waiting: bool, session: AsyncSession):
     user = await session.execute(
         select(User).where(User.tg_id == tg_id)
@@ -308,7 +339,26 @@ async def update_user_waiting_status(tg_id: int, waiting: bool, session: AsyncSe
     if user:
         user.wait_dice_game = waiting
         await session.commit()
-        
+
+
+async def get_balance(tg_id: int, session: AsyncSession) -> int:
+    user_query = select(User.balance).where(User.tg_id == tg_id)
+    result = await session.execute(user_query)
+    return result.scalar_one_or_none()
+
+async def set_user_status(tg_id: int, status: str, session: AsyncSession):
+    update_query = (
+        update(User)
+        .where(User.tg_id == tg_id)
+        .values(status=status)
+    )
+    await session.execute(update_query)
+    await session.commit()
+
+async def get_user_status(tg_id: int, session: AsyncSession):
+    select_query = select(User.status).where(User.tg_id == tg_id)
+    result = await session.execute(select_query)
+    return result.scalar_one_or_none()
 #Achievements
 async def add_achievement(tg_id: int, achievement_name: str):
     async with async_session() as session:
@@ -369,3 +419,18 @@ async def get_achievements_count(tg_id, session: AsyncSession):
         return taked_achievements_count
 
     return 0
+
+
+async def update_user(session: AsyncSession, user_id: int, referrer_id: int = None):
+    result = await session.execute(
+        select(User).filter(User.id == user_id)
+    )
+    user = result.scalars().first()
+
+    if not user:
+        raise ValueError(f"User with ID {user_id} not found")
+
+    if referrer_id is not None:
+        user.referrer_id = referrer_id
+    
+    await session.commit()

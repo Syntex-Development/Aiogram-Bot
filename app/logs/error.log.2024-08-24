@@ -1,0 +1,5 @@
+2024-08-24 16:05:09,227 | ERROR | handlers.py -> cmd_start():77 | Error command /start: 1 validation error for InlineKeyboardMarkup
+inline_keyboard
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.8/v/missing
+2024-08-24 17:33:26,048 | ERROR | handlers.py -> cmd_start():77 | Error command /start: user() missing 1 required positional argument: 'session'

@@ -12,30 +12,29 @@ from textwrap import dedent as dd
 from types import SimpleNamespace as asdataclass
 
 from app.middlewares import TestMiddleware1, TestMiddleware2
+from app.database import requests as rq
+
 from . import filters
 from . import states
 
 from random import randint
 
-from config import settings
-
-import app.resources.tools as tools
-from app.database import requests as rq
-import app.keyboards as kb
-
-
 from logging import Logger
 
+from dotenv import load_dotenv
 
-
+import app.resources.tools as tools
+import app.keyboards as kb
 import asyncio
-
+import os
+import time
 
 router = Router()
 router.callback_query.outer_middleware(TestMiddleware1())
 router.message.outer_middleware(TestMiddleware2())
 
-
+load_dotenv()
+bot = Bot(token=os.getenv('TOKEN'))
 
 @router.message(CommandStart())
 async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
@@ -57,8 +56,7 @@ async def cmd_start(message: Message, session: AsyncSession, logger: Logger):
         if referrer_id:
             referrer = await rq.get_user(tg_id=referrer_id, session=session)  
             if referrer:
-                # await rq.update_user(session, user_id, referrer_id=referrer_id) 
-                pass
+                await rq.update_user(session, user_id, referrer_id=referrer_id) 
 
         if user:
             if not user.initial_task_completed:
@@ -357,9 +355,9 @@ async def handler(callback : CallbackQuery, state: FSMContext):
 async def profile(message: Message, state: FSMContext, session: AsyncSession):
     tg_id = message.from_user.id
 
-    user = await rq.get_user(tg_id, session)  # Передаем сессию здесь
+    user = await rq.get_user(tg_id, session)
 
-    withdrawal_stat = await rq.get_stat_withdrawal(session)  # И здесь
+    withdrawal_stat = await rq.get_stat_withdrawal(session)
 
     if withdrawal_stat:
         bot_withdrawal_count = withdrawal_stat.bot_withdrawal_count
@@ -373,7 +371,7 @@ async def profile(message: Message, state: FSMContext, session: AsyncSession):
     lvl = user.lvl
     taked_achievements_count = await rq.get_achievements_count(tg_id, session)
     tg_bot_link = 'https://t.me/koshmrUCbot'
-    refferals_count = await rq.get_referral_count_by_tg_id(tg_id, session)  # И здесь
+    refferals_count = await rq.get_referral_count_by_tg_id(tg_id, session)
     earned_by_refferals = user.referral_earnings
     count_of_withdrawal = bot_withdrawal_count
     withdrawal_sum = bot_withdrawal_sum
@@ -481,71 +479,99 @@ async def check_handler(callback: CallbackQuery):
 async def back_handler(callback: CallbackQuery):
     await tasks_handler(callback.message)
 
+@router.message(lambda message: message.text == '🏆 ТОП')
+async def show_leaderboard(message: Message, state: FSMContext, session: AsyncSession):
+    leaderboard = await rq.get_top_users(limit=10,session=session)
+    user = await rq.get_user(message.from_user.id,session)
 
-@router.message(F.text == '🏆 ТОП')
-async def top(message: Message, session: AsyncSession):
-    top_users = await rq.get_top_users(limit=10, session=session)
-    user_top_position = await rq.get_user_top_position(message.from_user.id, session=session)
-    
-    top_text = "🏆 ТОП пользователей бота\n💠 Топ по приглашенным рефералам:\n\n"
-    for i, user in enumerate(top_users):
-        referrals_count = user.referrals.count() if user.referrals else 0
-        top_text += f"{i+1}# {user.username} - {referrals_count} приглашено\n"
+    if not user:
+        await message.answer("⚠️ Ошибка при получении данных пользователя.")
+        return
 
-    if user_top_position:
-        user_position_text = f"Ваше место в топе: {user_top_position}"
+    leaderboard_text = "🥇 Топ 10 пользователей:\n\n"
+
+    if not leaderboard:
+        leaderboard_text += "Список пуст. Станьте первым!\n\n"
     else:
-        user_position_text = "Вы скрыли себя"
+        for i, (user_id, full_name, task_count) in enumerate(leaderboard, 1):
+            clean_name = full_name or "Неизвестный"
+            leaderboard_text += f"{i}# {clean_name} - {task_count} заданий\n"
 
+    user_rank =  await rq.get_user_top_position(user.id,session)
+    if user_rank:
+        if user.is_hidden:
+            leaderboard_text += f"\nВаше место в топе: (Вы скрыли себя)"
+        else:
+            leaderboard_text += f"\nВаше место в топе: {user_rank}"
+    else:
+        leaderboard_text += "\nВаше место в топе: (Вне рейтинга)"
+
+    button_text = "🙈 Скрыть меня" if not user.is_hidden else "🐵 Показать меня"
     keyboard = InlineKeyboardMarkup(
-        row_width=1,
         inline_keyboard=[
-            [InlineKeyboardButton(
-                text="🙈 Скрыть меня" if user_top_position else "🙉 Показать меня",
-                callback_data="hide_me" if user_top_position else "show_me"
-            )],
-            [InlineKeyboardButton(text="🔄 Обновить ТОП", callback_data="refresh_top")],
-            [InlineKeyboardButton(text="🔙 Обратно", callback_data="back_to_profile")]
+            [InlineKeyboardButton(text=button_text, callback_data="toggle_visibility")]
         ]
     )
 
-    await message.answer(
-        f"{top_text}\n\n{user_position_text}",
+    await message.answer(text=leaderboard_text, reply_markup=keyboard)
+    session.close()
+
+
+@router.callback_query(lambda c: c.data == 'toggle_visibility')
+async def toggle_user_visibility(callback: CallbackQuery, session: AsyncSession):
+    user = await rq.get_user(callback.from_user.id,session)
+
+    if not user:
+        await bot.answer_callback_query(callback.id, "⚠️ Ошибка при получении данных пользователя.")
+        return
+
+    user.is_hidden = not user.is_hidden
+
+
+    leaderboard = await rq.get_top_users(limit=10,session=session)
+    leaderboard_text = "🏆 Топ 10 пользователей:\n\n"
+
+    if not leaderboard:
+        leaderboard_text += "Список пуст. Станьте первым!\n\n"
+    else:
+        for i, (user_id, full_name, task_count) in enumerate(leaderboard, 1):
+            clean_name = full_name or "Неизвестный"
+            leaderboard_text += f"{i}# {clean_name} - {task_count} заданий\n"
+
+    user_rank =  await rq.get_user_top_position(user.id,session)
+    if user_rank:
+        if user.is_hidden:
+            leaderboard_text += f"\nВаше место в топе: (Вы скрыли себя)"
+        else:
+            leaderboard_text += f"\nВаше место в топе: {user_rank}"
+    else:
+        leaderboard_text += "\nВаше место в топе: (Вне рейтинга)"
+
+    button_text = "🙈 Скрыть меня" if not user.is_hidden else "🐵 Показать меня"
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=button_text, callback_data="toggle_visibility")]
+        ]
+    )
+
+    await bot.edit_message_text(
+        text=leaderboard_text,
+        chat_id=str(callback.message.chat.id),
+        message_id=callback.message.message_id,
         reply_markup=keyboard
     )
-
-
-@router.callback_query(F.data == 'hide_me')
-async def hide_me_handler(callback: CallbackQuery, session: AsyncSession):
-    await rq.hide_user_in_top(callback.from_user.id, session)
-    await callback.message.edit_text(
-        f"Вы скрыли себя в топе",
-        reply_markup= await kb.refresh_top_kb()
-    )
-
-
-@router.callback_query(F.data == 'show_me')
-async def show_me_handler(callback: CallbackQuery, session: AsyncSession):
-    await rq.show_user_in_top(callback.from_user.id, session=session)
-    await callback.message.edit_text(
-        f"Теперь вы будете отображаться в топе",
-        reply_markup= await kb.refresh_top_kb()
-    )
-
-
-@router.callback_query(F.data == 'refresh_top')
-async def refresh_top_handler(callback: CallbackQuery, session: AsyncSession):
-    await top(callback.message, session=session)
+    await bot.answer_callback_query(callback.id, "Ваша видимость в топе изменена.")
+    session.close()
 
 
 @router.message(F.text == '💸 Вывод UC')
-async def withdrawal_uc(message: Message):
+async def withdrawal_uc(message: Message, session: AsyncSession):
 
-    user = await rq.user(message.from_user.id)
+    user = await rq.user(message.from_user.id, session)
     if user.balance < 60:
         await message.answer('Минимальная сумма вывода: <b>60 UC</b>', parse_mode='HTML', reply_markup=kb.back_to_profile_kb())
     elif user.balance >= 60:
-        withdrawal_stat = await rq.get_stat_withdrawal()
+        withdrawal_stat = await rq.get_stat_withdrawal(session)
 
         if withdrawal_stat:
             bot_withdrawal_count = withdrawal_stat.bot_withdrawal_count
@@ -566,12 +592,12 @@ async def withdrawal_uc(message: Message):
 
 
 @router.callback_query(F.data == 'withdrawal_uc')
-async def withdrawal_handler(callback: CallbackQuery, state: FSMContext):
+async def withdrawal_handler(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
     user = await rq.get_user_by_id(callback.from_user.id)
     if user.balance >= 60:
         code = await rq.get_activation_code()
         if code:
-            await rq.set_balance(callback.from_user.id, user.balance - 60)
+            await rq.set_balance(callback.from_user.id, user.balance - 60, session)
             await rq.update_withdrawal_stat()
             await callback.message.edit_text(
                 f"""
@@ -667,57 +693,104 @@ async def dice(callback: CallbackQuery):
     await callback.message.edit_text(text=message_dice, parse_mode='HTML', reply_markup=kb.bet())
 
 
-@router.callback_query(lambda c: c.data in ['5', '30', '60'])
-async def process_bet(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
-    try:
-        async with session:
-            bet_amount = int(callback.data)
-            user = await rq.user(callback.from_user.id, session)
+# @router.callback_query(lambda c: c.data in ['5', '30', '60'])
+# async def process_bet(callback: CallbackQuery, state: FSMContext, session: AsyncSession):
+#     try:
+#         bet_amount = int(callback.data)
+#         tg_id = callback.from_user.id
 
-            if user.balance < bet_amount:
-                await callback.message.answer(
-                    f'На вашем счету недостаточно средств!\nВаш баланс: <code>{user.balance} UC</code>',
-                    parse_mode='HTML',
-                    reply_markup=await kb.main_keyboard(user_id=callback.from_user.id, session=session)
-                )
-                await state.clear()
-                return
+#         user_status = await rq.get_user_status(tg_id, session)
 
-            await state.update_data(bet_amount=bet_amount)
+#         if user_status == 'waiting_opponent':
+#             await callback.answer('Вы уже ищете противника. Пожалуйста, дождитесь завершения текущей игры.', show_alert=True)
+#             return
+#         elif user_status == 'in_game':
+#             await callback.answer('Вы уже находитесь в активной игре. Пожалуйста, дождитесь ее завершения.', show_alert=True)
+#             return
 
-            search_message = await callback.message.edit_text(
-                f"Вы выбрали ставку: {bet_amount} UC. Ищем соперника...",
-                parse_mode='HTML'
-            )
-            await asyncio.sleep(3)
+#         user_balance = await rq.get_balance(tg_id, session)
 
-            await search_message.delete()
-            game = await callback.message.answer('Игра найдена, подбрасываю кости...')
+#         if user_balance < bet_amount:
+#             await callback.answer('У вас недостаточно средств для этой ставки.', show_alert=True)
+#             return
 
-            async def roll_dice():
-                player1_roll = randint(1, 6)
-                player2_roll = randint(1, 6)
-                return player1_roll, player2_roll
+#         await state.set_state(states.GameStates.waiting_opponent)
+#         await rq.start_game(tg_id, wait_game=True, bet_amount=bet_amount, session=session)
 
-            player1_roll, player2_roll = await roll_dice()
+#         await callback.answer('Поиск противника...')
 
-            await game.delete()
+#         timeout = 30
+#         start_time = time.monotonic()
+#         while time.monotonic() - start_time < timeout:
+#             opponent_tg_id = await rq.find_opp(tg_id, bet_amount, session)
+#             if opponent_tg_id:
+#                 break
+#             await asyncio.sleep(1)
 
-            if player1_roll > player2_roll:
-                user.balance += bet_amount
-                win_sum = user.balance
-                await rq.set_balance(callback.from_user.id, win_sum, session)
-                await callback.message.answer(
-                    f'<b>Вы победили!</b>\n\nВаш бросок: <b>{player1_roll}</b>\nБросок соперника: <b>{player2_roll}</b>\n\nБаланс: <code>{user.balance}</code>', reply_markup= kb.back_to_profile_kb())
-            
-            elif player1_roll < player2_roll:
-                user.balance -= bet_amount
-                win_sum = user.balance
-                await rq.set_balance(callback.from_user.id, win_sum, session)
-                await callback.message.answer(
-                    f'<b>Вы проиграли!</b>\n\nВаш бросок: <b>{player1_roll}</b>\nБросок соперника: <b>{player2_roll}</b>\n\nБаланс: <code>{user.balance}</code>', reply_markup= kb.back_to_profile_kb())
-        
-    except Exception as e:
-        print(e)
-        await callback.message.answer('Произошла ошибка...', reply_markup= kb.back_to_profile_kb())
-        await state.clear()
+#         if opponent_tg_id:
+#             player1_roll, player2_roll = await roll_dice()
+
+#             if player1_roll > player2_roll:
+#                 await rq.add_balance(tg_id, bet_amount, session)
+#                 winner_message = 'Поздравляем, вы выиграли!'
+#                 loser_message = 'К сожалению, вы проиграли.'
+#             elif player1_roll < player2_roll:
+#                 await rq.add_balance(opponent_tg_id, bet_amount, session)
+#                 winner_message = 'К сожалению, вы проиграли.'
+#                 loser_message = 'Поздравляем, вы выиграли!'
+#             else:
+#                 winner_message = 'Ничья!'
+#                 loser_message = 'Ничья!'
+
+#             updated_balance = await rq.get_balance(tg_id, session)
+
+#             result_message = (f'{winner_message}\n\n'
+#                               f'Ваш бросок: {player1_roll}\n'
+#                               f'Бросок соперника: {player2_roll}\n\n'
+#                               f'Ваш текущий баланс: <code>{updated_balance}</code>')
+
+#             await bot.send_message(chat_id=tg_id, text=result_message, parse_mode='HTML')
+#             await bot.send_message(chat_id=opponent_tg_id, text=loser_message, parse_mode='HTML')
+
+#             await rq.start_game(tg_id, wait_game=False, bet_amount=bet_amount, session=session)
+#             await rq.start_game(opponent_tg_id, wait_game=False, bet_amount=bet_amount, session=session)
+
+#             await rq.update_user_status(tg_id, 'idle', session=session)
+#             await rq.update_user_status(opponent_tg_id, 'idle', session=session)
+
+#             await state.clear()
+
+#         else:
+#             await callback.message.answer('Противник не найден, игра отменена.')
+#             await rq.update_user_status(tg_id, 'idle', session=session)
+#             await state.clear()
+
+#     except Exception as e:
+#         print(e)
+
+# async def roll_dice():
+#     player1_roll = randint(1, 6)
+#     player2_roll = randint(1, 6)
+#     return player1_roll, player2_roll
+
+
+
+@router.message(F.text == '❓ Ответы на вопросы')
+async def faq(message: Message, session: AsyncSession):
+    faq_message = """<b>❓ Привет! Здесь вы найдете ответы на часто задаваемые вопросы:</b>
+
+1️⃣ <b>Вопрос:</b> Почему я пригласил друга, а мне не зачислили награду?
+   🔹 <b>Ответ:</b> Приглашенные вами люди должны выполнить обязательные задания, чтобы вы, как реферер, получили свою награду. В противном случае увеличивается только счетчик приглашенных. Поэтому, когда приглашаете друзей, обязательно напомните им о необходимости выполнения первых простых заданий.
+
+2️⃣ <b>Вопрос:</b> В профиле указан не мой ID от PUBG Mobile. Почему? Как его поменять?
+   🔹 <b>Ответ:</b> ID, указанный в профиле, это ID вашего аккаунта в Telegram. Мы используем его для идентификации вас, отображения профиля и решения возможных проблем.
+
+3️⃣ <b>Вопрос:</b> Почему при нажатии на "Проверить" появляется сообщение, что задание не найдено?
+   🔹 <b>Ответ:</b> Сообщение "Задание не найдено" обычно означает, что задание завершено. В некоторых случаях это может значить, что администратор бота удалил задание, и оно больше не доступно.
+
+4️⃣ <b>Вопрос:</b> Как вывести UC из бота?
+   🔹 <b>Ответ:</b> После накопления необходимой суммы UC на вашем балансе, вы можете вывести их. Для этого нажмите на кнопку "Вывести" и следуйте инструкциям. После вывода вы получите код активации и ссылку на инструкцию по выводу.
+
+<b>Если у вас остались вопросы, не стесняйтесь обращаться к администрации.</b>"""
+    
+    await message.answer(faq_message, parse_mode='HTML', reply_markup=kb.back_to_profile_kb())

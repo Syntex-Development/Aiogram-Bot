@@ -1,0 +1,205 @@
+2024-08-22 21:40:55,741 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Mapper 'Mapper[User(users)]' has no property 'tasks_completed'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called.
+2024-08-22 21:40:56,904 | ERROR | handlers.py -> cmd_start():490 | Error command /start: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[TaskCompletion(task_completions)]'. Original exception was: Mapper 'Mapper[User(users)]' has no property 'tasks_completed'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called.
+2024-08-22 21:45:18,839 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Mapper 'Mapper[User(users)]' has no property 'tasks_completed'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called.
+2024-08-22 21:45:19,704 | ERROR | handlers.py -> cmd_start():490 | Error command /start: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[TaskCompletion(task_completions)]'. Original exception was: Mapper 'Mapper[User(users)]' has no property 'tasks_completed'.  If this property was indicated from other mappers or configure events, ensure registry.configure() has been called.
+2024-08-22 21:47:18,557 | ERROR | handlers.py -> cmd_start():490 | Error command /start: set_user() takes 2 positional arguments but 3 were given
+2024-08-22 21:47:19,535 | ERROR | handlers.py -> cmd_start():490 | Error command /start: set_user() takes 2 positional arguments but 3 were given
+2024-08-22 21:48:01,151 | ERROR | handlers.py -> cmd_start():490 | Error command /start: set_user() takes 2 positional arguments but 3 were given
+2024-08-22 21:48:01,922 | ERROR | handlers.py -> cmd_start():490 | Error command /start: set_user() takes 2 positional arguments but 3 were given
+2024-08-22 21:49:38,349 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-22 21:49:44,973 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-22 21:49:45,709 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-22 21:50:01,026 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-22 21:52:50,136 | ERROR | handlers.py -> cmd_start():490 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-22 22:46:49,806 | ERROR | handlers.py -> cmd_start():61 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-23 02:56:56,511 | ERROR | handlers.py -> cmd_start():67 | Error command /start: set_user() takes 1 positional argument but 2 were given
+2024-08-23 02:57:38,707 | ERROR | handlers.py -> cmd_start():67 | Error command /start: (pymysql.err.IntegrityError) (1048, "Column 'username' cannot be null")
+[SQL: INSERT INTO users (tg_id, username, full_name, balance, referral_earnings, referrer_id, rank_id, initial_task_completed, task_completed, is_hidden, all_cashout, referral_reward_collected, in_dice_game) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: (5612869186, None, '/', 0, 0, '', 0, 0, 0, 0, 0, 0, 0)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2024-08-23 02:59:50,946 | ERROR | handlers.py -> cmd_start():67 | Error command /start: (pymysql.err.DataError) (1366, "Incorrect integer value: '' for column 'referrer_id' at row 1")
+[SQL: INSERT INTO users (tg_id, username, full_name, balance, referral_earnings, referrer_id, rank_id, initial_task_completed, task_completed, is_hidden, all_cashout, referral_reward_collected, in_dice_game) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: (5612869186, '', '/', 0, 0, '', 0, 0, 0, 0, 0, 0, 0)]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2024-08-23 02:59:50,948 | ERROR | handlers.py -> cmd_start():67 | Error command /start: (pymysql.err.DataError) (1366, "Incorrect integer value: '' for column 'referrer_id' at row 1")
+[SQL: INSERT INTO users (tg_id, username, full_name, balance, referral_earnings, referrer_id, rank_id, initial_task_completed, task_completed, is_hidden, all_cashout, referral_reward_collected, in_dice_game) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: (5612869186, '', '/', 0, 0, '', 0, 0, 0, 0, 0, 0, 0)]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2024-08-23 02:59:50,965 | ERROR | handlers.py -> cmd_start():67 | Error command /start: (pymysql.err.DataError) (1366, "Incorrect integer value: '' for column 'referrer_id' at row 1")
+[SQL: INSERT INTO users (tg_id, username, full_name, balance, referral_earnings, referrer_id, rank_id, initial_task_completed, task_completed, is_hidden, all_cashout, referral_reward_collected, in_dice_game) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: (5612869186, '', '/', 0, 0, '', 0, 0, 0, 0, 0, 0, 0)]
+(Background on this error at: https://sqlalche.me/e/20/9h9h)
+2024-08-23 03:08:41,774 | ERROR | handlers.py -> cmd_start():67 | Error command /start: (pymysql.err.IntegrityError) (1452, 'Cannot add or update a child row: a foreign key constraint fails (`test_db`.`users`, CONSTRAINT `users_ibfk_1` FOREIGN KEY (`referrer_id`) REFERENCES `users` (`id`))')
+[SQL: INSERT INTO users (tg_id, username, full_name, balance, referral_earnings, referrer_id, rank_id, initial_task_completed, task_completed, is_hidden, all_cashout, referral_reward_collected, in_dice_game) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)]
+[parameters: (5612869186, '', '/', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2024-08-23 03:10:38,764 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 03:13:37,657 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 03:15:20,597 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 03:16:44,482 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 1 validation error for InlineKeyboardMarkup
+inline_keyboard
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.8/v/missing
+2024-08-23 03:17:10,194 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 1 validation error for InlineKeyboardMarkup
+inline_keyboard
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.8/v/missing
+2024-08-23 03:17:54,811 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 03:18:23,299 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 1 validation error for InlineKeyboardMarkup
+inline_keyboard
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.8/v/missing
+2024-08-23 03:19:37,062 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 03:21:59,354 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 15:30:09,969 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 15:31:00,749 | ERROR | handlers.py -> cmd_start():67 | Error command /start: 4 validation errors for SendMessage
+reply_markup.InlineKeyboardMarkup
+  Input should be a valid dictionary or instance of InlineKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardMarkup
+  Input should be a valid dictionary or instance of ReplyKeyboardMarkup [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ReplyKeyboardRemove
+  Input should be a valid dictionary or instance of ReplyKeyboardRemove [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+reply_markup.ForceReply
+  Input should be a valid dictionary or instance of ForceReply [type=model_type, input_value=True, input_type=bool]
+    For further information visit https://errors.pydantic.dev/2.8/v/model_type
+2024-08-23 15:58:26,458 | ERROR | handlers.py -> cmd_start():67 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-23 15:58:41,232 | ERROR | handlers.py -> cmd_start():67 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-23 16:01:04,899 | ERROR | handlers.py -> cmd_start():67 | Error command /start: Telegram server says - Bad Request: chat not found
+2024-08-23 16:20:40,042 | ERROR | handlers.py -> cmd_start():80 | Error command /start: 'ScalarResult' object has no attribute 'initial_task_completed'
+2024-08-23 16:23:18,184 | ERROR | handlers.py -> cmd_start():81 | Error command /start: 'ScalarResult' object has no attribute 'initial_task_completed'
+2024-08-23 16:43:23,876 | ERROR | handlers.py -> cmd_start():81 | Error command /start: 'coroutine' object is not iterable
+2024-08-23 16:43:48,386 | ERROR | handlers.py -> cmd_start():81 | Error command /start: AsyncSession.scalars() missing 1 required positional argument: 'statement'
+2024-08-23 16:44:46,606 | ERROR | handlers.py -> cmd_start():81 | Error command /start: HTTP Client says - ClientConnectorError: Cannot connect to host api.telegram.org:443 ssl:default [Превышен таймаут семафора]
+2024-08-23 16:49:33,971 | ERROR | handlers.py -> cmd_start():81 | Error command /start: 'coroutine' object is not iterable
+2024-08-23 16:50:55,776 | ERROR | handlers.py -> cmd_start():81 | Error command /start: 'BaseChannels' object is not subscriptable
+2024-08-23 16:53:29,180 | ERROR | handlers.py -> cmd_start():81 | Error command /start: 'BaseChannels' object is not subscriptable
+2024-08-23 18:01:19,927 | ERROR | handlers.py -> cmd_start():81 | Error command /start: 'BaseChannels' object is not subscriptable
+2024-08-23 18:33:21,065 | ERROR | handlers.py -> cmd_start():76 | Error command /start: main_keyboard() missing 2 required positional arguments: 'user_id' and 'session'
+2024-08-23 18:33:27,259 | ERROR | handlers.py -> cmd_start():76 | Error command /start: main_keyboard() missing 2 required positional arguments: 'user_id' and 'session'
+2024-08-23 18:33:31,892 | ERROR | handlers.py -> cmd_start():76 | Error command /start: main_keyboard() missing 2 required positional arguments: 'user_id' and 'session'
+2024-08-23 18:34:00,104 | ERROR | handlers.py -> cmd_start():76 | Error command /start: name 'callback' is not defined
+2024-08-23 19:37:40,782 | ERROR | handlers.py -> cmd_start():76 | Error command /start: 1 validation error for InlineKeyboardMarkup
+inline_keyboard
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.8/v/missing
+2024-08-23 21:57:46,942 | ERROR | handlers.py -> cmd_start():76 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 21:58:29,297 | ERROR | handlers.py -> cmd_start():76 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 21:59:04,359 | ERROR | handlers.py -> cmd_start():76 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:08:41,956 | ERROR | handlers.py -> cmd_start():76 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,344 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,357 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,357 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,358 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,358 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,359 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,359 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,359 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:13:15,745 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:14:48,744 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:14:52,501 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:14:53,168 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:16:48,432 | ERROR | handlers.py -> cmd_start():78 | Error command /start: set_user() missing 1 required positional argument: 'session'
+2024-08-23 22:16:50,413 | ERROR | handlers.py -> cmd_start():78 | Error command /start: set_user() missing 1 required positional argument: 'session'
+2024-08-23 22:17:20,059 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:17:21,137 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:20:36,249 | ERROR | handlers.py -> cmd_start():77 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:22:13,475 | ERROR | handlers.py -> cmd_start():77 | Error command /start: 'AsyncSession' object has no attribute 'one_or_none'
+2024-08-23 22:24:21,778 | ERROR | handlers.py -> cmd_start():75 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:25:21,863 | ERROR | handlers.py -> cmd_start():75 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:26:04,149 | ERROR | handlers.py -> cmd_start():75 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:26:39,141 | ERROR | handlers.py -> cmd_start():75 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:27:47,803 | ERROR | handlers.py -> cmd_start():76 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:29:00,551 | ERROR | handlers.py -> cmd_start():76 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:29:50,045 | ERROR | handlers.py -> cmd_start():76 | Error command /start: user() missing 1 required positional argument: 'session'
+2024-08-23 22:32:16,918 | ERROR | handlers.py -> cmd_start():76 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:32:18,352 | ERROR | handlers.py -> cmd_start():76 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:36:54,600 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:38:39,732 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'
+2024-08-23 22:40:13,226 | ERROR | handlers.py -> cmd_start():78 | Error command /start: __init__() got an unexpected keyword argument 'tg_id'

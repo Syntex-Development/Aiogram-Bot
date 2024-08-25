@@ -25,5 +25,8 @@ class Balance(StatesGroup):
 class ReviewState(StatesGroup):
     review_text = State()
 
-class DiceGame(StatesGroup):
-    bet_amount = State() 
+class GameStates(StatesGroup):
+    waiting_opponent = State()
+
+class Form(StatesGroup):
+    top_message = State()
