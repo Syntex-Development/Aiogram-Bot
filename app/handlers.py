@@ -794,3 +794,6 @@ async def faq(message: Message, session: AsyncSession):
 <b>Если у вас остались вопросы, не стесняйтесь обращаться к администрации.</b>"""
     
     await message.answer(faq_message, parse_mode='HTML', reply_markup=kb.back_to_profile_kb())
+
+
+    123
